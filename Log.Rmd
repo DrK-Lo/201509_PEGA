@@ -28,7 +28,7 @@ RootShoot_Ratio (matching the two above)
 TotalWeight (not matching any GWAS)
 
 A similar problem exists for the GEs - 
-in addition to the problem that some GEs were log-trasformed for the PE but not log-transformed for the GEAs.  Specifically log(MAP) and log(MSP)
+in addition to the problem that some GEs were log-trasformed for the PE but not log-transformed for the GEAs.  Specifically log(MAP) and log(MSP).  Some of the PEs for MAP were comparably large, which makes me worry a bit because the GEAs were not very significant for this variable.  Should we have log transformed it?
 
 I made files 
 * EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv
