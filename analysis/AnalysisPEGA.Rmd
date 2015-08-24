@@ -26,6 +26,9 @@ setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
 PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
 head(PE)
 
+PE_matchGWAS <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv", header=TRUE)
+PE_matchGEA <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv", header=TRUE)
+
 flip <- read.table("data/large_files/flip.cor", header=TRUE)
 head(flip)
 
@@ -35,5 +38,5 @@ results_head
 
 ### Loop through PE file
 
-i=190 # let's start with a large correlation
+i=190 # let's start with a large correlation and not budset until we get that right...
 PE[i,]
