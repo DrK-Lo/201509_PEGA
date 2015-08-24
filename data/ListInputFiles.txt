@@ -1,0 +1,9 @@
+List_files_pine_hulk
+"/data/seqcap/pine/bwa_pseudo/round2_bams/flip.cor" "-1/1 indicating whether rho from GEA needs to be flipped to match GWAS slope"
+"/data/seqcap/pine/bwa_pseudo/round2_bams/final_tables_filt/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS" "main results with  bayenv, LFMM, and GCTA results etc."
+"/data/seqcap/pine/bwa_pseudo/round2_bams/final_tables_filt/var_out_GATK3_allhet_pine688_ALL.summary.target.table.indel_mod.plog.ORFs_new_annot" "updated annotations"
+"super_outliers_per_variable_pine_both_methods_100x_raw.txt" ""
+"super_outliers_per_variable_pine_both_methods_100x.txt" ""
+"super_outliers_per_variable_pine_both_methods_gcontigs_100x_raw.txt" ""
+"super_outliers_per_variable_pine_both_methods_gcontigs_100x.txt" ""
+"EnvironmentPhenotypeCorrelations-PineSpruce-spearman.csv" "Spearman's PEAs"
