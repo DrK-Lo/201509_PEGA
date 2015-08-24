@@ -71,6 +71,15 @@ img {
 <p>This log is in Blog-style format (newest at top)</p>
 <div id="august-24-2015" class="section level2">
 <h2>August 24, 2015</h2>
+<p>Download data to laptop. I am in the directory /data of the project folder, and downloading these files the the “large_files” subfolder. Files in that folder will not be synced to github, potentially causing it to crash. You will have to download these files in order to run code on your laptop. I’m not running it through hulk because of lack of visualization.</p>
+<pre><code>Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/flip.cor large_files
+
+Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS large_files
+
+Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/super_outliers_per_variable_pine_both_methods_* large_files</code></pre>
+</div>
+<div id="august-24-2015-1" class="section level2">
+<h2>August 24, 2015</h2>
 <p>This is the beginning of my attempt to integrate the phenotypic, genetic, and environmental data for the pine Adaptree results. The rationale follows like this:</p>
 <ul>
 <li>Organisms adapt to their environment, and a measure of this is the correlation between measured phenotypes grown in a common garden and the environments that they came from (the PEA: phenotype-environment-association, Spearman’s correlation)</li>

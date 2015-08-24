@@ -1,0 +1,39 @@
+---
+title: "PEGA for Pine Analysis"
+author: "Katie Lotterhos"
+date: "August 24, 2015"
+output: html_document
+---
+
+Basic algorithm:
+
+1. choose environment
+2. choose phenotype
+3. get PE association
+4. get relevant column data for each SNP (bayenv rho, bayenv bf, gwas slope, gwas p-value) using system calls
+5. correct rho for different coding from gwas using flip.cor using merge
+6. correct rho for PE/GWAS direction (polarize)
+    + (PE-correlation sign) * (GWAS-slope sign) = correction sign
+7. (remove large values that are not significant)
+8. plot GWAS slope (x axis) vs GEA (y axis)
+    + color points in 1st and 3rd quadrants in green (signs match expected direction)
+    + color points in 2nd and 4th quadrants in purple (signs don't match expected direction)
+    
+```{r}
+setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
+
+### load data
+PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
+head(PE)
+
+flip <- read.table("data/large_files/flip.cor", header=TRUE)
+head(flip)
+
+results_head <- scan("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", what = "character", nlines = 1)
+results_head
+####
+
+### Loop through PE file
+
+i=190 # let's start with a large correlation
+PE[i,]
