@@ -1,0 +1,27 @@
+---
+title: "PEGA for pine"
+author: "Katie Lotterhos"
+date: "August 24, 2015"
+output: html_document
+---
+
+This log is in Blog-style format (newest at top)
+
+## August 24, 2015
+
+This is the beginning of my attempt to integrate the phenotypic, genetic, and environmental data for the pine Adaptree results.  The rationale follows like this:
+
+* Organisms adapt to their environment, and a measure of this is the correlation between measured phenotypes grown in a common garden and the environments that they came from (the PEA: phenotype-environment-association, Spearman's correlation)
+* We can estimate the effect that a SNP has on that phenotype with GWAS (the genotype-phenotype association, a slope)
+* With knowledge of the PEA and the GPA, we can visualize the genetic architecture of the genetic-environment-association (Spearman's rho from Bayenv2).
+
+For each phenotype-environment association, here is the conceptual idea:
+
+![PEGA sketch](201508PEGA.png)
+
+If the GEA effects were polarized/adjusted based on the direction of the PEA and GWAS, then we could visualize this in the same way for all traits and environments.
+
+### Some initial issues
+* __From Kay around August 20__: So for the bayenv formatting I printed out the alleles in alphabetical order. This made the most sense at the time because it was the easiest to implement (I did not need to determine overall SNP frequency for any reason in the script) and the SNP table did not have the reference allele denoted any place.  But Haktan coded things in terms of allele frequency, so we will have to flip the signs for those that differed. (Kay made the file "flip" for that purpose, this will be an additional sign change prior to the polarization discussed above)
+
+* __From Sam on August 24__: Turns out that the way that budset was measured in spruce in season 1 wasn't biologically representative (they all set bud in such a short window that the timing of sampling didn't catch much of it), but that was the trait we'd been using for gwas and phenotype-environment correlations, and that was probably responsible for the reason why spruce and pine had opposite correlations between phenotype and environment for budset. Pia figured that a better way to calculate budset for spruce would be to use the season 2 measurements, which were calculated a little differently. Using these values, pine and spruce have very similar correlations between budset and environment. So now Haktan is redoing the GWAS on this new budset trait for spruce (again) and I'll redo the super-outlier things (again), and the analysis (again). 
