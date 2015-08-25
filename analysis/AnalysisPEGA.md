@@ -34,6 +34,7 @@ markdownToHTML("AnalysisPEGA.md", "AnalysisPEGA.html")  # converts an md file to
 setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
   if (!("hexbin" %in% installed.packages())){install.packages("hexbin")}
   library(hexbin)
+library(gridExtra)
 ### load data
 PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
 #reorder to make largest effects on top
@@ -378,7 +379,7 @@ dim(results)
 ```r
 ### Loop through PE file
 
-for (i in 1:nrow(PE)){
+for (i in 1:5){#nrow(PE)){
   print(i)
 ### Match names
   PE_envi_name <- as.character(PE$Environment[i])
@@ -408,63 +409,42 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 
   GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
 
-   hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-2,2), ylim=c(-0.5,0.5))
+#  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
+  #plot(hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
+       
+hxb<-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
+#hxb@xcm    #gives the x co-ordinates of each hex tile
+#hxb@ycm    #gives the y co-ordinates of each hex tile
+#hxb@count  #gives the cell size for each hex tile
+#points(x=hxb@xcm, y=hxb@ycm, col=grey(hxb@count*0.01))
 
-}
+  png(paste("analysis/PEGA_",PE_envi_name,"_",PE_pheno_name,"_",i, ".png",sep=""), width=6, height=5, units="in", res=300)
+  par(mar=c(1,1,1,1))
+  a<- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
+  plot(a)
+  #do.call(grid.arrange, c(a, ncol=1))
+  dev.off()
+
+  plot(a)
+} #end loop
 ```
 
 ```
 ## [1] 1
-## [1] 2
-## [1] 3
-## [1] 4
-## [1] 5
-## [1] 6
-## [1] 7
-## [1] 8
-## [1] 9
-## [1] 10
-## [1] 11
-## [1] 12
-## [1] 13
-## [1] 14
-## [1] 15
-## [1] 16
-## [1] 17
-## [1] 18
-## [1] 19
-## [1] 20
-## [1] 21
-## [1] 22
-## [1] 23
-## [1] 24
-## [1] 25
-## [1] 26
-## [1] 27
-## [1] 28
-## [1] 29
-## [1] 30
-## [1] 31
-## [1] 32
-## [1] 33
-## [1] 34
-## [1] 35
-## [1] 36
-## [1] 37
-## [1] 38
-## [1] 39
-## [1] 40
-## [1] 41
-## [1] 42
-## [1] 43
-## [1] 44
-## [1] 45
-## [1] 46
-## [1] 47
-## [1] 48
-## [1] 49
 ```
 
 ```
-## Error: any(id) is not TRUE
+## [1] 2
+```
+
+```
+## [1] 3
+```
+
+```
+## [1] 4
+```
+
+```
+## [1] 5
 ```

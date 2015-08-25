@@ -33,6 +33,7 @@ markdownToHTML("AnalysisPEGA.md", "AnalysisPEGA.html")  # converts an md file to
 setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
   if (!("hexbin" %in% installed.packages())){install.packages("hexbin")}
   library(hexbin)
+library(gridExtra)
 ### load data
 PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
 #reorder to make largest effects on top
@@ -55,7 +56,7 @@ dim(results)
 
 ### Loop through PE file
 
-for (i in 1:48){#nrow(PE)){
+for (i in 1:nrow(PE)){
   print(i)
 ### Match names
   PE_envi_name <- as.character(PE$Environment[i])
@@ -66,10 +67,12 @@ for (i in 1:48){#nrow(PE)){
 
 ### Get relevant columns from large file
   
-  GWAS_effect_col <- which(results_head==gsub("p","snp_effect", GWAS_pheno_name))
+  GWAS_effect_col <- which(results_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+  if (length(GWAS_effect_col)!=1){print("ERROR: GWAS_effect_col does not equal 1")}
   GWAS_effect <- results[,GWAS_effect_col]
 
   GEA_effect_cols <- grep(paste(GEA_envi_name,"_rho", sep=""), results_head)
+  if (length(GEA_effect_cols)!=2){print("ERROR: GEA_effect_cols does not equal 2")}
   GEA_rho <- rowMeans(results[,GEA_effect_cols], na.rm=TRUE)
 
 ### check that "flip"" order matches "results" order
@@ -83,10 +86,41 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 ### Polarize GEA so sign aligns with PE and GWAS sign
   PE_cor <- PE$pine_correlation[i]
 
-  GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
+  if (sum(GWAS_effect==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 effect, will skew results")}
 
-  pdf(paste("analysis/PEGA_",i, ".pdf",sep=""), width=6, height=5)
-   hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5))
+  if(PE_cor != 0){
+  GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
+  }else{
+  GEA_rho_polarized <- GEA_rho_flip * sign(GWAS_effect)  
+  }
+
+#  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
+  #plot(hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
+       
+#hxb<-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
+#hxb@xcm    #gives the x co-ordinates of each hex tile
+#hxb@ycm    #gives the y co-ordinates of each hex tile
+#hxb@count  #gives the cell size for each hex tile
+#points(x=hxb@xcm, y=hxb@ycm, col=grey(hxb@count*0.01))
+  a<- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
+
+  png(paste("analysis/figure_byenvi/PEGA_",PE_envi_name,"_",i,"_",PE_pheno_name, ".png",sep=""), width=6, height=5, units="in", res=300)
+  par(mar=c(1,1,1,1))
+  plot(a)
+  #do.call(grid.arrange, c(a, ncol=1))
   dev.off()
 
-}
+  png(paste("analysis/figure_byPEcor/PEGA_",i, "_", PE_envi_name,"_",PE_pheno_name,"_",i, ".png",sep=""), width=6, height=5, units="in", res=300)
+  par(mar=c(1,1,1,1))
+  plot(a)
+  #do.call(grid.arrange, c(a, ncol=1))
+  dev.off()
+
+
+  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=6, height=5, units="in", res=300)
+  par(mar=c(1,1,1,1))
+  plot(a)
+  #do.call(grid.arrange, c(a, ncol=1))
+  dev.off()
+
+} #end loop
