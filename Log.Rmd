@@ -27,6 +27,9 @@ root_wt__shoot_wt_p_1
 RootShoot_Ratio (matching the two above)
 TotalWeight (not matching any GWAS)
 
+From Sam:
+* One is a ratio (root wt / shoot wt) and the other is a sum (root wt + shoot wt).  The two root-shoot things clearly should have been called something more meaningful. The order has been maintained for Haktan, so the first root_wt__shoot_wt_p is the ratio and the second one (_p1) is the sum. As for total weight I think that was Laura's way of getting rid of the root_shoot problem, and it probably means root wt + shoot wt. Clear as mud?
+
 A similar problem exists for the GEs - 
 in addition to the problem that some GEs were log-trasformed for the PE but not log-transformed for the GEAs.  Specifically log(MAP) and log(MSP).  Some of the PEs for MAP were comparably large, which makes me worry a bit because the GEAs were not very significant for this variable.  Should we have log transformed it?
 

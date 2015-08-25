@@ -19,11 +19,24 @@ Basic algorithm:
     + color points in 1st and 3rd quadrants in green (signs match expected direction)
     + color points in 2nd and 4th quadrants in purple (signs don't match expected direction)
     
+#### Note
+Note that the code runs fastest if you work through R in a terminal window and upload the "results" object first.  Once it is uploaded, when the markdown is created it won't try to load the "results" dataframe, which is very large.  To make this markdown file:
+```
+library(knitr)
+library(markdown)
+setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysis")
+knit("AnalysisPEGA.Rmd")  # produces the md file
+markdownToHTML("AnalysisPEGA.md", "AnalysisPEGA.html")  # converts an md file to html
+```
+    
 ```{r}
 setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
-
+  if (!("hexbin" %in% installed.packages())){install.packages("hexbin")}
+  library(hexbin)
 ### load data
 PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
+#reorder to make largest effects on top
+PE <- PE[rev(order(abs(PE$pine_correlation))),]
 head(PE)
 
 PE_matchGWAS <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv", header=TRUE)
@@ -34,9 +47,46 @@ head(flip)
 
 results_head <- scan("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", what = "character", nlines = 1)
 results_head
-####
+#### read in results if it doesn't exist
+if (!("results" %in% ls())){
+results <- read.table("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
+  }
+dim(results)
 
 ### Loop through PE file
 
-i=190 # let's start with a large correlation and not budset until we get that right...
-PE[i,]
+for (i in 1:48){#nrow(PE)){
+  print(i)
+### Match names
+  PE_envi_name <- as.character(PE$Environment[i])
+  GEA_envi_name <- as.character(PE_matchGEA$Environment_GEA[which(PE_matchGEA$Environment_PE==PE_envi_name)])
+  
+  PE_pheno_name <- as.character(PE$Phenotype[i])
+  GWAS_pheno_name <- as.character(PE_matchGWAS$Phenotype_GWAS[which(PE_matchGWAS$Phenotype_PE==PE_pheno_name)])
+
+### Get relevant columns from large file
+  
+  GWAS_effect_col <- which(results_head==gsub("p","snp_effect", GWAS_pheno_name))
+  GWAS_effect <- results[,GWAS_effect_col]
+
+  GEA_effect_cols <- grep(paste(GEA_envi_name,"_rho", sep=""), results_head)
+  GEA_rho <- rowMeans(results[,GEA_effect_cols], na.rm=TRUE)
+
+### check that "flip"" order matches "results" order
+if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
+  print("ERROR!  SNP order in flip file does not match results file")
+}
+
+### Flip GEA_rho so sign matches GWAS_effect
+  GEA_rho_flip <- GEA_rho * flip$X1
+
+### Polarize GEA so sign aligns with PE and GWAS sign
+  PE_cor <- PE$pine_correlation[i]
+
+  GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
+
+  pdf(paste("analysis/PEGA_",i, ".pdf",sep=""), width=6, height=5)
+   hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5))
+  dev.off()
+
+}
