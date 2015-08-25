@@ -57,13 +57,14 @@ dim(results)
 ### Loop through PE file
 
 for (i in 1:nrow(PE)){
-  print(i)
 ### Match names
   PE_envi_name <- as.character(PE$Environment[i])
   GEA_envi_name <- as.character(PE_matchGEA$Environment_GEA[which(PE_matchGEA$Environment_PE==PE_envi_name)])
   
   PE_pheno_name <- as.character(PE$Phenotype[i])
   GWAS_pheno_name <- as.character(PE_matchGWAS$Phenotype_GWAS[which(PE_matchGWAS$Phenotype_PE==PE_pheno_name)])
+  
+  print(c(i, GEA_envi_name, GWAS_pheno_name))
 
 ### Get relevant columns from large file
   
@@ -71,7 +72,7 @@ for (i in 1:nrow(PE)){
   if (length(GWAS_effect_col)!=1){print("ERROR: GWAS_effect_col does not equal 1")}
   GWAS_effect <- results[,GWAS_effect_col]
 
-  GEA_effect_cols <- grep(paste(GEA_envi_name,"_rho", sep=""), results_head)
+  GEA_effect_cols <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_head)
   if (length(GEA_effect_cols)!=2){print("ERROR: GEA_effect_cols does not equal 2")}
   GEA_rho <- rowMeans(results[,GEA_effect_cols], na.rm=TRUE)
 
@@ -86,12 +87,15 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 ### Polarize GEA so sign aligns with PE and GWAS sign
   PE_cor <- PE$pine_correlation[i]
 
-  if (sum(GWAS_effect==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 effect, will skew results")}
+  GWAS_sign <- sign(GWAS_effect)
+  GWAS_sign[GWAS_sign==0]=1
+
+  if (sum(GWAS_sign==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results")} fixed this with code below
 
   if(PE_cor != 0){
-  GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
+  GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * GWAS_sign
   }else{
-  GEA_rho_polarized <- GEA_rho_flip * sign(GWAS_effect)  
+  GEA_rho_polarized <- GEA_rho_flip * GWAS_sign  
   }
 
 #  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
