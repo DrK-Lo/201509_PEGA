@@ -90,7 +90,7 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
   GWAS_sign <- sign(GWAS_effect)
   GWAS_sign[GWAS_sign==0]=1
 
-  if (sum(GWAS_sign==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results")} fixed this with code below
+  if (sum(GWAS_sign==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results")} #fixed this with code below
 
   if(PE_cor != 0){
   GEA_rho_polarized <- GEA_rho_flip * sign(PE_cor) * GWAS_sign
