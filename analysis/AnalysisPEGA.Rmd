@@ -81,6 +81,7 @@ dim(results)
   pine_super_g_raw <- as.character(pine_raw_gcontig$pine[pine_raw_gcontig$super_outlier_score > 1])
   pine_indexes_super_g_raw <- which(as.character(results$gcontig) %in% pine_super_g_raw)
 
+  PE$score_ALL <- PE$score_super_t <- PE$score_super_t_raw <- PE$score_super_g <- PE$score_super_g_raw <- NA
 
 ### Loop through PE file
 
@@ -157,23 +158,50 @@ plotter <- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
     image.plot(seq(-10,10,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
              xlab="GWAS effect standardized", ylab="GEA rho (polarized)", main=paste(main, ", Score = ",round(score,1)))
   }
+  return(score)
   }
 
-pdf("Pine.pdf", height=16, width=4)
-  par(mfrow=c(6,1), mar=c(4,4,4,1))
+  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=5, height=18, units="in", res=300)
+  par(mfrow=c(6,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
   plotter(GWAS_effect, GEA_rho_polarized, main="All SNPs", is.standard=FALSE)
-  plotter(GWAS_effect_standardized, GEA_rho_polarized, main="All SNPs Standardized", is.standard=TRUE)
-  plotter(GWAS_effect_standardized[pine_indexes_super_t], GEA_rho_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
-  plotter(GWAS_effect_standardized[pine_indexes_super_t_raw], GEA_rho_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
-  plotter(GWAS_effect_standardized[pine_indexes_super_g], GEA_rho_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
-  plotter(GWAS_effect_standardized[pine_indexes_super_g_raw], GEA_rho_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
-dev.off()
-
-
-  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=6, height=5, units="in", res=300)
-  par(mar=c(1,1,1,1))
-
-  #do.call(grid.arrange, c(a, ncol=1))
+  PE$score_ALL[i]<-plotter(GWAS_effect_standardized, GEA_rho_polarized, main="All SNPs Standardized", is.standard=TRUE)
+  PE$score_super_t[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_t], GEA_rho_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+  PE$score_super_t_raw[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_t_raw], GEA_rho_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+  PE$score_super_g[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_g], GEA_rho_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+  PE$score_super_g_raw[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_g_raw], GEA_rho_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
+  title("yo")
+  mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], sep=" "),
+        side=3, outer=TRUE, line=-1)
   dev.off()
 
 } #end loop
+
+head(PE)
+
+png(paste("analysis/Scores.png"), width=5, height=18, units="in", res=300)
+ par(mfrow=c(5,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
+  plot(abs(PE$pine_correlation), PE$score_ALL)
+  m1 <- lm(PE$score_ALL~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m1)
+  abline(lm(PE$score_ALL~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$score_super_t)
+  m2 <- lm(PE$score_super_t~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m2)
+  abline(lm(PE$score_super_t~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$score_super_t_raw)
+  m3 <- lm(PE$score_super_t_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m3)
+  abline(lm(PE$score_super_t_raw~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$score_super_g)
+  m4<- lm(PE$score_super_g~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m4)
+  abline(lm(PE$score_super_g~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$score_super_g_raw)
+  m5 <- lm(PE$score_super_g_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m5)
+  abline(lm(PE$score_super_g_raw~abs(PE$pine_correlation)))
+dev.off()
