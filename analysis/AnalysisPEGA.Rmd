@@ -54,6 +54,37 @@ results <- read.table("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary
   }
 dim(results)
 
+### Upload superoutliers file
+  pine_raw_tcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt", header=TRUE)
+  pine_tcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_100x.txt", header=TRUE)
+  pine_raw_gcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_gcontigs_100x_raw.txt", header=TRUE)
+  pine_gcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_gcontigs_100x.txt", header=TRUE)
+
+  head(pine_tcontig)
+  head(pine_gcontig)
+
+### Get list of superoutliers
+  pine_super_t <- as.character(pine_tcontig$pine[pine_tcontig$super_outlier_score > 1])
+  pine_super_t_raw <- as.character(pine_raw_tcontig$pine[pine_raw_tcontig$super_outlier_score > 1])
+  pine_super_g <- as.character(pine_gcontig$pine[pine_gcontig$super_outlier_score > 1])
+  pine_super_g_raw <- as.character(pine_raw_gcontig$pine[pine_raw_gcontig$super_outlier_score > 1])
+
+### Get indexes of superoutliers in 'results' dataframe
+get_index <- function(superlist, t_or_g){
+  # t_or_g is transcript or genomic contig
+  super_results <- NULL
+  for (j in 1:length(superlist)){
+     if (t_or_g=="t"){ind <- which(as.character(results$tcontig) %in% superlist[j])}
+     if (t_or_g=="g"){ind <- which(as.character(results$gcontig) %in% superlist[j])}
+     super_results <- c(super_results, ind)
+     if (j%%100==0){print(c(j, length(ind)))}
+    }
+  return(super_results)
+}
+
+  indexes_super_t <- get_index(pine_super_t, "t")
+
+
 ### Loop through PE file
 
 for (i in 1:nrow(PE)){
@@ -100,13 +131,54 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 
 #  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
   #plot(hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
-       
-#hxb<-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
-#hxb@xcm    #gives the x co-ordinates of each hex tile
-#hxb@ycm    #gives the y co-ordinates of each hex tile
-#hxb@count  #gives the cell size for each hex tile
-#points(x=hxb@xcm, y=hxb@ycm, col=grey(hxb@count*0.01))
+
+
+### Plotting 
+install.packages("ash")
+library(ash)
+
+plotter <- function(GWAS_effect, GEA_rho_polarized, main){
+  data1 <- cbind(GWAS_effect, GEA_rho_polarized)
+  data1b <- data1[complete.cases(data1),]
+  binned <- bin2(data1b, 
+                 matrix(c(-3,3,-0.5,0.5), 2,2, byrow=TRUE), 
+                 nbin=c(100,100))
+  binned$nc[binned$nc==0]=NA
+  image.plot(seq(-3,3,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+             xlab="GWAS effect", ylab="GEA rho (polarized)", main=main)
+  }
+
+pdf("Pine.pdf", height=14, width=4)
+  par(mfrow=c(5,1), mar=c(4,4,4,1))
+  plotter(GWAS_effect, GEA_rho_polarized, main="All SNPs")
+  plotter(GWAS_effect[indexes_super_t], GEA_rho_polarized[indexes_super_t], main="Super tcontigs")
+dev.off()
+
   a<- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
+  a_super_t <- hexbinplot(GEA_rho_polarized[indexes_super_t]~GWAS_effect[indexes_super_t], xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
+   
+  par(mfrow=c(2,1), mar=c(4,4,1,1))
+  plot(a)
+  plot(a_super_t)
+library(gridExtra)    
+do.call(grid.arrange, c(list(plot(hxb), plot(hxb_super_t)), ncol=2))
+
+
+ hxb<-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
+  hxb_super_t <- hexbin(GWAS_effect[indexes_super_t], GEA_rho_polarized[indexes_super_t],xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
+
+plotscript <- function(superind){
+  pp<- plot(hxb)
+  pushHexport(pp$plot.vp)
+  x <- GWAS_effect[superind]
+  y <- GEA_rho_polarized[superind]
+    grid.points(x,y,gp=gpar(col=rgb(0,0,1,0.3)),
+                pch=20,size = unit(0.5, "char"))
+  popViewport()
+}
+plotscript(indexes_super_t)
+
+
 
   png(paste("analysis/figure_byenvi/PEGA_",PE_envi_name,"_",i,"_",PE_pheno_name, ".png",sep=""), width=6, height=5, units="in", res=300)
   par(mar=c(1,1,1,1))
@@ -123,7 +195,7 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 
   png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=6, height=5, units="in", res=300)
   par(mar=c(1,1,1,1))
-  plot(a)
+
   #do.call(grid.arrange, c(a, ncol=1))
   dev.off()
 
