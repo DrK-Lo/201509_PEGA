@@ -225,7 +225,7 @@ hr {
 
 <h4>Note</h4>
 
-<p>Note that the code runs fastest if you work through R in a terminal window and upload the &ldquo;results&rdquo; object first.  Once it is uploaded, when the markdown is created it won&#39;t try to load the &ldquo;results&rdquo; dataframe, which is very large.  To make this markdown file:</p>
+<p>Note that the code runs fastest if you work through R in a terminal window and upload the &ldquo;results_pine&rdquo; object first.  Once it is uploaded, when the markdown is created it won&#39;t try to load the &ldquo;results_pine&rdquo; dataframe, which is very large.  To make this markdown file:</p>
 
 <pre><code>library(knitr)
 library(markdown)
@@ -237,7 +237,11 @@ markdownToHTML(&quot;AnalysisPEGA.md&quot;, &quot;AnalysisPEGA.html&quot;)  # co
 <pre><code class="r">setwd(&quot;~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA&quot;)
   if (!(&quot;hexbin&quot; %in% installed.packages())){install.packages(&quot;hexbin&quot;)}
   library(hexbin)
-library(gridExtra)
+  if (!(&quot;gridExtra&quot; %in% installed.packages())){install.packages(&quot;ash&quot;)}
+  library(gridExtra)
+  if (!(&quot;ash&quot; %in% installed.packages())){install.packages(&quot;ash&quot;)}
+  library(ash)
+
 ### load data
 PE &lt;- read.csv(&quot;data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv&quot;, header=TRUE)
 #reorder to make largest effects on top
@@ -264,8 +268,8 @@ head(PE)
 <pre><code class="r">PE_matchGWAS &lt;- read.csv(&quot;data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv&quot;, header=TRUE)
 PE_matchGEA &lt;- read.csv(&quot;data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv&quot;, header=TRUE)
 
-flip &lt;- read.table(&quot;data/large_files/flip.cor&quot;, header=TRUE)
-head(flip)
+flip_pine &lt;- read.table(&quot;data/large_files/flip_pine.cor&quot;, header=TRUE)
+head(flip_pine)
 </code></pre>
 
 <pre><code>##   gcontig__gcontig_pos X1
@@ -277,305 +281,78 @@ head(flip)
 ## 6         C10572747__9 -1
 </code></pre>
 
-<pre><code class="r">results_head &lt;- scan(&quot;data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS&quot;, what = &quot;character&quot;, nlines = 1)
-results_head
-</code></pre>
-
-<pre><code>##   [1] &quot;gcontig__gcontig_pos&quot;               
-##   [2] &quot;gcontig&quot;                            
-##   [3] &quot;pos_gcontig&quot;                        
-##   [4] &quot;X_annotation&quot;                       
-##   [5] &quot;paralogy_rank&quot;                      
-##   [6] &quot;tcontig&quot;                            
-##   [7] &quot;pos_tcontig&quot;                        
-##   [8] &quot;gmap_percentID&quot;                     
-##   [9] &quot;offtarget_dist&quot;                     
-##  [10] &quot;num_alleles&quot;                        
-##  [11] &quot;num_ind&quot;                            
-##  [12] &quot;num_comm_gtype&quot;                     
-##  [13] &quot;major_allele&quot;                       
-##  [14] &quot;major_num&quot;                          
-##  [15] &quot;major_freq&quot;                         
-##  [16] &quot;minor_allele&quot;                       
-##  [17] &quot;minor_num&quot;                          
-##  [18] &quot;minor_freq&quot;                         
-##  [19] &quot;freq_hetzyg&quot;                        
-##  [20] &quot;MAP_dir1&quot;                           
-##  [21] &quot;MAP_dir2&quot;                           
-##  [22] &quot;MAP_MgGm&quot;                           
-##  [23] &quot;noncode_in_covar&quot;                   
-##  [24] &quot;MQ&quot;                                 
-##  [25] &quot;haplotype_score&quot;                    
-##  [26] &quot;FS&quot;                                 
-##  [27] &quot;MQRankSum&quot;                          
-##  [28] &quot;ReadPosRankSum&quot;                     
-##  [29] &quot;allele_balance&quot;                     
-##  [30] &quot;window_stat&quot;                        
-##  [31] &quot;scaffold&quot;                           
-##  [32] &quot;scaf_pos&quot;                           
-##  [33] &quot;xtx&quot;                                
-##  [34] &quot;LAT&quot;                                
-##  [35] &quot;LAT_rho1&quot;                           
-##  [36] &quot;LAT_rho2&quot;                           
-##  [37] &quot;LONG&quot;                               
-##  [38] &quot;LONG_rho1&quot;                          
-##  [39] &quot;LONG_rho2&quot;                          
-##  [40] &quot;ELEVATION&quot;                          
-##  [41] &quot;ELEVATION_rho1&quot;                     
-##  [42] &quot;ELEVATION_rho2&quot;                     
-##  [43] &quot;MAT&quot;                                
-##  [44] &quot;MAT_rho1&quot;                           
-##  [45] &quot;MAT_rho2&quot;                           
-##  [46] &quot;MWMT&quot;                               
-##  [47] &quot;MWMT_rho1&quot;                          
-##  [48] &quot;MWMT_rho2&quot;                          
-##  [49] &quot;MCMT&quot;                               
-##  [50] &quot;MCMT_rho1&quot;                          
-##  [51] &quot;MCMT_rho2&quot;                          
-##  [52] &quot;TD&quot;                                 
-##  [53] &quot;TD_rho1&quot;                            
-##  [54] &quot;TD_rho2&quot;                            
-##  [55] &quot;MAP&quot;                                
-##  [56] &quot;MAP_rho1&quot;                           
-##  [57] &quot;MAP_rho2&quot;                           
-##  [58] &quot;MSP&quot;                                
-##  [59] &quot;MSP_rho1&quot;                           
-##  [60] &quot;MSP_rho2&quot;                           
-##  [61] &quot;AHM&quot;                                
-##  [62] &quot;AHM_rho1&quot;                           
-##  [63] &quot;AHM_rho2&quot;                           
-##  [64] &quot;SHM&quot;                                
-##  [65] &quot;SHM_rho1&quot;                           
-##  [66] &quot;SHM_rho2&quot;                           
-##  [67] &quot;DD_0&quot;                               
-##  [68] &quot;DD_0_rho1&quot;                          
-##  [69] &quot;DD_0_rho2&quot;                          
-##  [70] &quot;DD5&quot;                                
-##  [71] &quot;DD5_rho1&quot;                           
-##  [72] &quot;DD5_rho2&quot;                           
-##  [73] &quot;NFFD&quot;                               
-##  [74] &quot;NFFD_rho1&quot;                          
-##  [75] &quot;NFFD_rho2&quot;                          
-##  [76] &quot;bFFP&quot;                               
-##  [77] &quot;bFFP_rho1&quot;                          
-##  [78] &quot;bFFP_rho2&quot;                          
-##  [79] &quot;eFFP&quot;                               
-##  [80] &quot;eFFP_rho1&quot;                          
-##  [81] &quot;eFFP_rho2&quot;                          
-##  [82] &quot;FFP&quot;                                
-##  [83] &quot;FFP_rho1&quot;                           
-##  [84] &quot;FFP_rho2&quot;                           
-##  [85] &quot;PAS&quot;                                
-##  [86] &quot;PAS_rho1&quot;                           
-##  [87] &quot;PAS_rho2&quot;                           
-##  [88] &quot;EMT&quot;                                
-##  [89] &quot;EMT_rho1&quot;                           
-##  [90] &quot;EMT_rho2&quot;                           
-##  [91] &quot;EXT&quot;                                
-##  [92] &quot;EXT_rho1&quot;                           
-##  [93] &quot;EXT_rho2&quot;                           
-##  [94] &quot;Eref&quot;                               
-##  [95] &quot;Eref_rho1&quot;                          
-##  [96] &quot;Eref_rho2&quot;                          
-##  [97] &quot;CMD&quot;                                
-##  [98] &quot;CMD_rho1&quot;                           
-##  [99] &quot;CMD_rho2&quot;                           
-## [100] &quot;LAT_z_lfmm_beagle&quot;                  
-## [101] &quot;LAT_q_lfmm_beagle&quot;                  
-## [102] &quot;LONG_z_lfmm_beagle&quot;                 
-## [103] &quot;LONG_q_lfmm_beagle&quot;                 
-## [104] &quot;ELEVATION_z_lfmm_beagle&quot;            
-## [105] &quot;ELEVATION_q_lfmm_beagle&quot;            
-## [106] &quot;MAT_z_lfmm_beagle&quot;                  
-## [107] &quot;MAT_q_lfmm_beagle&quot;                  
-## [108] &quot;MWMT_z_lfmm_beagle&quot;                 
-## [109] &quot;MWMT_q_lfmm_beagle&quot;                 
-## [110] &quot;MCMT_z_lfmm_beagle&quot;                 
-## [111] &quot;MCMT_q_lfmm_beagle&quot;                 
-## [112] &quot;TD_z_lfmm_beagle&quot;                   
-## [113] &quot;TD_q_lfmm_beagle&quot;                   
-## [114] &quot;MAP_z_lfmm_beagle&quot;                  
-## [115] &quot;MAP_q_lfmm_beagle&quot;                  
-## [116] &quot;MSP_z_lfmm_beagle&quot;                  
-## [117] &quot;MSP_q_lfmm_beagle&quot;                  
-## [118] &quot;AHM_z_lfmm_beagle&quot;                  
-## [119] &quot;AHM_q_lfmm_beagle&quot;                  
-## [120] &quot;SHM_z_lfmm_beagle&quot;                  
-## [121] &quot;SHM_q_lfmm_beagle&quot;                  
-## [122] &quot;DD_0_z_lfmm_beagle&quot;                 
-## [123] &quot;DD_0_q_lfmm_beagle&quot;                 
-## [124] &quot;DD5_z_lfmm_beagle&quot;                  
-## [125] &quot;DD5_q_lfmm_beagle&quot;                  
-## [126] &quot;NFFD_z_lfmm_beagle&quot;                 
-## [127] &quot;NFFD_q_lfmm_beagle&quot;                 
-## [128] &quot;bFFP_z_lfmm_beagle&quot;                 
-## [129] &quot;bFFP_q_lfmm_beagle&quot;                 
-## [130] &quot;eFFP_z_lfmm_beagle&quot;                 
-## [131] &quot;eFFP_q_lfmm_beagle&quot;                 
-## [132] &quot;FFP_z_lfmm_beagle&quot;                  
-## [133] &quot;FFP_q_lfmm_beagle&quot;                  
-## [134] &quot;PAS_z_lfmm_beagle&quot;                  
-## [135] &quot;PAS_q_lfmm_beagle&quot;                  
-## [136] &quot;EMT_z_lfmm_beagle&quot;                  
-## [137] &quot;EMT_q_lfmm_beagle&quot;                  
-## [138] &quot;EXT_z_lfmm_beagle&quot;                  
-## [139] &quot;EXT_q_lfmm_beagle&quot;                  
-## [140] &quot;Eref_z_lfmm_beagle&quot;                 
-## [141] &quot;Eref_q_lfmm_beagle&quot;                 
-## [142] &quot;CMD_z_lfmm_beagle&quot;                  
-## [143] &quot;CMD_q_lfmm_beagle&quot;                  
-## [144] &quot;bayenv_PCA1&quot;                        
-## [145] &quot;bayenv_PCA1_rho1&quot;                   
-## [146] &quot;bayenv_PCA1_rho2&quot;                   
-## [147] &quot;bayenv_PCA2&quot;                        
-## [148] &quot;bayenv_PCA2_rho1&quot;                   
-## [149] &quot;bayenv_PCA2_rho2&quot;                   
-## [150] &quot;bayenv_PCA3&quot;                        
-## [151] &quot;bayenv_PCA3_rho1&quot;                   
-## [152] &quot;bayenv_PCA3_rho2&quot;                   
-## [153] &quot;bayenv_PCA4&quot;                        
-## [154] &quot;bayenv_PCA4_rho1&quot;                   
-## [155] &quot;bayenv_PCA4_rho2&quot;                   
-## [156] &quot;bayenv_PCA5&quot;                        
-## [157] &quot;bayenv_PCA5_rho1&quot;                   
-## [158] &quot;bayenv_PCA5_rho2&quot;                   
-## [159] &quot;bayenv_PCA6&quot;                        
-## [160] &quot;bayenv_PCA6_rho1&quot;                   
-## [161] &quot;bayenv_PCA6_rho2&quot;                   
-## [162] &quot;bayenv_PCA7&quot;                        
-## [163] &quot;bayenv_PCA7_rho1&quot;                   
-## [164] &quot;bayenv_PCA7_rho2&quot;                   
-## [165] &quot;bayenv_PCA8&quot;                        
-## [166] &quot;bayenv_PCA8_rho1&quot;                   
-## [167] &quot;bayenv_PCA8_rho2&quot;                   
-## [168] &quot;bayenv_PCA9&quot;                        
-## [169] &quot;bayenv_PCA9_rho1&quot;                   
-## [170] &quot;bayenv_PCA9_rho2&quot;                   
-## [171] &quot;bayenv_PCA10&quot;                       
-## [172] &quot;bayenv_PCA10_rho1&quot;                  
-## [173] &quot;bayenv_PCA10_rho2&quot;                  
-## [174] &quot;bayenv_PCA11&quot;                       
-## [175] &quot;bayenv_PCA11_rho1&quot;                  
-## [176] &quot;bayenv_PCA11_rho2&quot;                  
-## [177] &quot;bayenv_PCA12&quot;                       
-## [178] &quot;bayenv_PCA12_rho1&quot;                  
-## [179] &quot;bayenv_PCA12_rho2&quot;                  
-## [180] &quot;bayenv_PCA13&quot;                       
-## [181] &quot;bayenv_PCA13_rho1&quot;                  
-## [182] &quot;bayenv_PCA13_rho2&quot;                  
-## [183] &quot;bayenv_PCA14&quot;                       
-## [184] &quot;bayenv_PCA14_rho1&quot;                  
-## [185] &quot;bayenv_PCA14_rho2&quot;                  
-## [186] &quot;bayenv_PCA15&quot;                       
-## [187] &quot;bayenv_PCA15_rho1&quot;                  
-## [188] &quot;bayenv_PCA15_rho2&quot;                  
-## [189] &quot;bayenv_PCA16&quot;                       
-## [190] &quot;bayenv_PCA16_rho1&quot;                  
-## [191] &quot;bayenv_PCA16_rho2&quot;                  
-## [192] &quot;bayenv_PCA17&quot;                       
-## [193] &quot;bayenv_PCA17_rho1&quot;                  
-## [194] &quot;bayenv_PCA17_rho2&quot;                  
-## [195] &quot;bayenv_PCA18&quot;                       
-## [196] &quot;bayenv_PCA18_rho1&quot;                  
-## [197] &quot;bayenv_PCA18_rho2&quot;                  
-## [198] &quot;bayenv_PCA19&quot;                       
-## [199] &quot;bayenv_PCA19_rho1&quot;                  
-## [200] &quot;bayenv_PCA19_rho2&quot;                  
-## [201] &quot;bayenv_PCA20&quot;                       
-## [202] &quot;bayenv_PCA20_rho1&quot;                  
-## [203] &quot;bayenv_PCA20_rho2&quot;                  
-## [204] &quot;bayenv_PCA21&quot;                       
-## [205] &quot;bayenv_PCA21_rho1&quot;                  
-## [206] &quot;bayenv_PCA21_rho2&quot;                  
-## [207] &quot;bayenv_PCA22&quot;                       
-## [208] &quot;bayenv_PCA22_rho1&quot;                  
-## [209] &quot;bayenv_PCA22_rho2&quot;                  
-## [210] &quot;Budset_p&quot;                           
-## [211] &quot;Budset_snp_effect&quot;                  
-## [212] &quot;Budbreak_p&quot;                         
-## [213] &quot;Budbreak_snp_effect&quot;                
-## [214] &quot;Height_season_1_p&quot;                  
-## [215] &quot;Height_season_1_snp_effect&quot;         
-## [216] &quot;Height_season_2_p&quot;                  
-## [217] &quot;Height_season_2_snp_effect&quot;         
-## [218] &quot;Diameter_p&quot;                         
-## [219] &quot;Diameter_snp_effect&quot;                
-## [220] &quot;Shoot_weight_p&quot;                     
-## [221] &quot;Shoot_weight_snp_effect&quot;            
-## [222] &quot;Root_weight_p&quot;                      
-## [223] &quot;Root_weight_snp_effect&quot;             
-## [224] &quot;Max_growth_rate_p&quot;                  
-## [225] &quot;Max_growth_rate_snp_effect&quot;         
-## [226] &quot;Linear_growth_days_p&quot;               
-## [227] &quot;Linear_growth_days_snp_effect&quot;      
-## [228] &quot;X5_growth_complete_days_p&quot;          
-## [229] &quot;X5_growth_complete_days_snp_effect&quot; 
-## [230] &quot;X95_growth_complete_days_p&quot;         
-## [231] &quot;X95_growth_complete_days_snp_effect&quot;
-## [232] &quot;X5_95_growth_days_p&quot;                
-## [233] &quot;X5_95_growth_days_snp_effect&quot;       
-## [234] &quot;Fall_cold_injury_p&quot;                 
-## [235] &quot;Fall_cold_injury_snp_effect&quot;        
-## [236] &quot;Winter_cold_injury_p&quot;               
-## [237] &quot;Winter_cold_injury_snp_effect&quot;      
-## [238] &quot;Spring_cold_injury_p&quot;               
-## [239] &quot;Spring_cold_injury_snp_effect&quot;      
-## [240] &quot;root_wt__shoot_wt_p&quot;                
-## [241] &quot;root_wt__shoot_wt_snp_effect&quot;       
-## [242] &quot;root_wt__shoot_wt_p_1&quot;              
-## [243] &quot;root_wt__shoot_wt_snp_effect_1&quot;     
-## [244] &quot;gcta_PC1_p&quot;                         
-## [245] &quot;gcta_PC1_snp_effect&quot;                
-## [246] &quot;gcta_PC2_p&quot;                         
-## [247] &quot;gcta_PC2_snp_effect&quot;                
-## [248] &quot;gcta_PC3_p&quot;                         
-## [249] &quot;gcta_PC3_snp_effect&quot;                
-## [250] &quot;gcta_PC4_p&quot;                         
-## [251] &quot;gcta_PC4_snp_effect&quot;                
-## [252] &quot;gcta_PC5_p&quot;                         
-## [253] &quot;gcta_PC5_snp_effect&quot;                
-## [254] &quot;gcta_PC6_p&quot;                         
-## [255] &quot;gcta_PC6_snp_effect&quot;                
-## [256] &quot;gcta_PC7_p&quot;                         
-## [257] &quot;gcta_PC7_snp_effect&quot;                
-## [258] &quot;gcta_PC8_p&quot;                         
-## [259] &quot;gcta_PC8_snp_effect&quot;                
-## [260] &quot;gcta_PC9_p&quot;                         
-## [261] &quot;gcta_PC9_snp_effect&quot;                
-## [262] &quot;gcta_PC10_p&quot;                        
-## [263] &quot;gcta_PC10_snp_effect&quot;               
-## [264] &quot;gcta_PC11_p&quot;                        
-## [265] &quot;gcta_PC11_snp_effect&quot;               
-## [266] &quot;gcta_PC12_p&quot;                        
-## [267] &quot;gcta_PC12_snp_effect&quot;               
-## [268] &quot;gcta_PC13_p&quot;                        
-## [269] &quot;gcta_PC13_snp_effect&quot;               
-## [270] &quot;gcta_PC14_p&quot;                        
-## [271] &quot;gcta_PC14_snp_effect&quot;               
-## [272] &quot;gcta_PC15_p&quot;                        
-## [273] &quot;gcta_PC15_snp_effect&quot;               
-## [274] &quot;gcta_PC16_p&quot;                        
-## [275] &quot;gcta_PC16_snp_effect&quot;               
-## [276] &quot;category_snp_array&quot;                 
-## [277] &quot;sequenced_contig_length&quot;            
-## [278] &quot;affx_name&quot;                          
-## [279] &quot;ax_name&quot;
-</code></pre>
-
-<pre><code class="r">#### read in results if it doesn&#39;t exist
-if (!(&quot;results&quot; %in% ls())){
-results &lt;- read.table(&quot;data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS&quot;, header=TRUE, comment.char=&quot; &quot;)
+<pre><code class="r">#### read in results_pine if it doesn&#39;t exist
+if (!(&quot;results_pine&quot; %in% ls())){
+results_pine &lt;- read.table(&quot;data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS&quot;, header=TRUE, comment.char=&quot; &quot;)
   }
-dim(results)
+dim(results_pine)
 </code></pre>
 
 <pre><code>## [1] 1251074     279
 </code></pre>
 
-<pre><code class="r">### Loop through PE file
+<pre><code class="r">### Upload superoutliers file
+  pine_raw_tcontig &lt;- read.table(&quot;data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt&quot;, header=TRUE)
+  pine_tcontig &lt;- read.table(&quot;data/large_files/super_outliers_per_variable_pine_both_methods_100x.txt&quot;, header=TRUE)
+  pine_raw_gcontig &lt;- read.table(&quot;data/large_files/super_outliers_per_variable_pine_both_methods_gcontigs_100x_raw.txt&quot;, header=TRUE)
+  pine_gcontig &lt;- read.table(&quot;data/large_files/super_outliers_per_variable_pine_both_methods_gcontigs_100x.txt&quot;, header=TRUE)
 
-for (i in 1:5){#nrow(PE)){
-  print(i)
+  head(pine_tcontig)
+</code></pre>
+
+<pre><code>##                 pine snp_count outlier_count      ratio
+## 1      comp0_c0_seq1        14             1 0.07142857
+## 2 comp100159_c0_seq1         3             2 0.66666667
+## 3  comp10016_c0_seq1        56             2 0.03571429
+## 4  comp10018_c0_seq1        53             2 0.03773585
+## 5   comp1001_c0_seq1        42             1 0.02380952
+## 6  comp10020_c0_seq1        20             1 0.05000000
+##   super_outlier_score            status test_name
+## 1         -0.09765642 non-super-outlier       LAT
+## 2          0.42145652 non-super-outlier       LAT
+## 3         -0.18458752 non-super-outlier       LAT
+## 4         -0.16906323 non-super-outlier       LAT
+## 5         -0.23498452 non-super-outlier       LAT
+## 6         -0.12775533 non-super-outlier       LAT
+</code></pre>
+
+<pre><code class="r">  head(pine_gcontig)
+</code></pre>
+
+<pre><code>##                pine snp_count outlier_count      ratio super_outlier_score
+## 1         C24432054        10             2 0.20000000          0.13929921
+## 2         C26044696         1             1 1.00000000         -0.02491853
+## 3         C26870990        14             1 0.07142857         -0.09595732
+## 4         C27752974         1             1 1.00000000         -0.02491853
+## 5  C28162626_93_546         3             1 0.33333333         -0.03685996
+## 6 C28932838_119_624        14             2 0.14285714          0.09011353
+##              status test_name
+## 1 non-super-outlier       LAT
+## 2     super_outlier       LAT
+## 3 non-super-outlier       LAT
+## 4     super_outlier       LAT
+## 5 non-super-outlier       LAT
+## 6 non-super-outlier       LAT
+</code></pre>
+
+<pre><code class="r">### Get list of superoutliers
+  pine_super_t &lt;- as.character(pine_tcontig$pine[pine_tcontig$super_outlier_score &gt; 1])
+  pine_indexes_super_t &lt;- which(as.character(results_pine$tcontig) %in% pine_super_t)
+
+  pine_super_t_raw &lt;- as.character(pine_raw_tcontig$pine[pine_raw_tcontig$super_outlier_score &gt; 1])
+  pine_indexes_super_t_raw &lt;- which(as.character(results_pine$tcontig) %in% pine_super_t_raw)
+
+  pine_super_g &lt;- as.character(pine_gcontig$pine[pine_gcontig$super_outlier_score &gt; 1])
+  pine_indexes_super_g &lt;- which(as.character(results_pine$gcontig) %in% pine_super_g)
+
+  pine_super_g_raw &lt;- as.character(pine_raw_gcontig$pine[pine_raw_gcontig$super_outlier_score &gt; 1])
+  pine_indexes_super_g_raw &lt;- which(as.character(results_pine$gcontig) %in% pine_super_g_raw)
+
+  PE$pine_score_ALL &lt;- PE$pine_score_super_t &lt;- PE$pine_score_super_t_raw &lt;- PE$pine_score_super_g &lt;- PE$pine_score_super_g_raw &lt;- NA
+
+### Loop through PE file
+
+for (i in 1:nrow(PE)){
 ### Match names
   PE_envi_name &lt;- as.character(PE$Environment[i])
   GEA_envi_name &lt;- as.character(PE_matchGEA$Environment_GEA[which(PE_matchGEA$Environment_PE==PE_envi_name)])
@@ -583,60 +360,1813 @@ for (i in 1:5){#nrow(PE)){
   PE_pheno_name &lt;- as.character(PE$Phenotype[i])
   GWAS_pheno_name &lt;- as.character(PE_matchGWAS$Phenotype_GWAS[which(PE_matchGWAS$Phenotype_PE==PE_pheno_name)])
 
+  print(c(i, GEA_envi_name, GWAS_pheno_name))
+
 ### Get relevant columns from large file
+  results_pine_head &lt;- names(results_pine)
+  GWAS_effect_col &lt;- which(results_pine_head==gsub(&quot;_p&quot;,&quot;_snp_effect&quot;, GWAS_pheno_name))
+  if (length(GWAS_effect_col)!=1){print(&quot;ERROR: GWAS_effect_col does not equal 1&quot;)}
+  GWAS_effect &lt;- results_pine[,GWAS_effect_col]
 
-  GWAS_effect_col &lt;- which(results_head==gsub(&quot;p&quot;,&quot;snp_effect&quot;, GWAS_pheno_name))
-  GWAS_effect &lt;- results[,GWAS_effect_col]
+  GEA_effect_cols &lt;- grep(paste(&quot;^&quot;,GEA_envi_name,&quot;_rho&quot;, sep=&quot;&quot;), results_pine_head)
+  if (length(GEA_effect_cols)!=2){print(&quot;ERROR: GEA_effect_cols does not equal 2&quot;)}
+  GEA_rho &lt;- rowMeans(results_pine[,GEA_effect_cols], na.rm=TRUE)
 
-  GEA_effect_cols &lt;- grep(paste(GEA_envi_name,&quot;_rho&quot;, sep=&quot;&quot;), results_head)
-  GEA_rho &lt;- rowMeans(results[,GEA_effect_cols], na.rm=TRUE)
-
-### check that &quot;flip&quot;&quot; order matches &quot;results&quot; order
-if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
-  print(&quot;ERROR!  SNP order in flip file does not match results file&quot;)
+### check that &quot;flip_pine&quot;&quot; order matches &quot;results_pine&quot; order
+if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_pos))){
+  print(&quot;ERROR!  SNP order in flip_pine file does not match results_pine file&quot;)
 }
 
-### Flip GEA_rho so sign matches GWAS_effect
-  GEA_rho_flip &lt;- GEA_rho * flip$X1
+### flip_pine GEA_rho so sign matches GWAS_effect
+  GEA_rho_flip_pine &lt;- GEA_rho * flip_pine$X1
 
 ### Polarize GEA so sign aligns with PE and GWAS sign
   PE_cor &lt;- PE$pine_correlation[i]
 
-  GEA_rho_polarized &lt;- GEA_rho_flip * sign(PE_cor) * sign(GWAS_effect)
+  GWAS_sign &lt;- sign(GWAS_effect)
+  GWAS_sign[GWAS_sign==0]=1
+
+  if (sum(GWAS_sign==0, na.rm=TRUE)&gt;0){print(&quot;ERROR: Some GWAS have 0 sign for polarization, will skew results_pine&quot;)} #fixed this with code below
+
+  if(PE_cor != 0){
+  GEA_rho_polarized &lt;- GEA_rho_flip_pine * sign(PE_cor) * GWAS_sign
+  }else{
+  GEA_rho_polarized &lt;- GEA_rho_flip_pine * GWAS_sign  
+  }
 
 #  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
   #plot(hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
 
-hxb&lt;-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
-#hxb@xcm    #gives the x co-ordinates of each hex tile
-#hxb@ycm    #gives the y co-ordinates of each hex tile
-#hxb@count  #gives the cell size for each hex tile
-#points(x=hxb@xcm, y=hxb@ycm, col=grey(hxb@count*0.01))
 
-  png(paste(&quot;analysis/PEGA_&quot;,PE_envi_name,&quot;_&quot;,PE_pheno_name,&quot;_&quot;,i, &quot;.png&quot;,sep=&quot;&quot;), width=6, height=5, units=&quot;in&quot;, res=300)
-  par(mar=c(1,1,1,1))
-  a&lt;- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
-  plot(a)
-  #do.call(grid.arrange, c(a, ncol=1))
+### Plotting 
+
+
+GWAS_effect_standardized &lt;- GWAS_effect/sd(GWAS_effect, na.rm=TRUE)
+
+plotter &lt;- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
+  data1 &lt;- cbind(GWAS_effect, GEA_rho_polarized)
+  data1b &lt;- data1[complete.cases(data1),]
+  score1 &lt;- sum(data1b[,1]*data1b[,2])
+  score &lt;- score1/nrow(data1b)*10000
+  if(is.standard==FALSE){
+    binned &lt;- bin2(data1b, 
+                 matrix(c(-3,3,-0.5,0.5), 2,2, byrow=TRUE), 
+                 nbin=c(100,100))
+    binned$nc[binned$nc==0]=NA
+    image.plot(seq(-3,3,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+             xlab=&quot;GWAS effect&quot;, ylab=&quot;GEA rho (polarized)&quot;, main=main)
+    #text(2.9,0.45, round(score,1))
+  }
+  if(is.standard==TRUE){
+    binned &lt;- bin2(data1b, 
+                 matrix(c(-10,10,-0.5,0.5), 2,2, byrow=TRUE), 
+                 nbin=c(100,100))
+    binned$nc[binned$nc==0]=NA
+    image.plot(seq(-10,10,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+             xlab=&quot;GWAS effect standardized&quot;, ylab=&quot;GEA rho (polarized)&quot;, main=paste(main, &quot;, Score = &quot;,round(score,1)))
+  }
+  return(score)
+  }
+
+  png(paste(&quot;analysis/figure_byPheno/PEGA_&quot; ,PE_pheno_name,&quot;_&quot;,i, &quot;_&quot;, PE_envi_name,&quot;.png&quot;,sep=&quot;&quot;), width=5, height=18, units=&quot;in&quot;, res=300)
+  par(mfrow=c(6,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
+  plotter(GWAS_effect, GEA_rho_polarized, main=&quot;All SNPs&quot;, is.standard=FALSE)
+  PE$pine_score_ALL[i]&lt;-plotter(GWAS_effect_standardized, GEA_rho_polarized, main=&quot;All SNPs Standardized&quot;, is.standard=TRUE)
+  PE$pine_score_super_t[i]&lt;-plotter(GWAS_effect_standardized[pine_indexes_super_t], GEA_rho_polarized[pine_indexes_super_t], main=&quot;Super tcontigs&quot;, is.standard=TRUE)
+  PE$pine_score_super_t_raw[i]&lt;-plotter(GWAS_effect_standardized[pine_indexes_super_t_raw], GEA_rho_polarized[pine_indexes_super_t_raw], main=&quot;Super tcontigs RAW&quot;, is.standard=TRUE)
+  PE$pine_score_super_g[i]&lt;-plotter(GWAS_effect_standardized[pine_indexes_super_g], GEA_rho_polarized[pine_indexes_super_g], main=&quot;Super gcontigs&quot;, is.standard=TRUE)
+  PE$pine_score_super_g_raw[i]&lt;-plotter(GWAS_effect_standardized[pine_indexes_super_g_raw], GEA_rho_polarized[pine_indexes_super_g_raw], main=&quot;Super gcontigs RAW&quot;, is.standard=TRUE)
+  title(&quot;yo&quot;)
+  mtext(paste(PE_pheno_name, PE_envi_name, &quot;\nPine&quot;, PE$pine_correlation[i], sep=&quot; &quot;),
+        side=3, outer=TRUE, line=-1)
   dev.off()
 
-  plot(a)
 } #end loop
 </code></pre>
 
-<pre><code>## [1] 1
+<pre><code>## [1] &quot;1&quot;                  &quot;LAT&quot;                &quot;Fall_cold_injury_p&quot;
 </code></pre>
 
-<pre><code>## [1] 2
+<pre><code>## [1] &quot;2&quot;        &quot;CMD&quot;      &quot;Budset_p&quot;
 </code></pre>
 
-<pre><code>## [1] 3
+<pre><code>## [1] &quot;3&quot;                  &quot;MCMT&quot;               &quot;Fall_cold_injury_p&quot;
 </code></pre>
 
-<pre><code>## [1] 4
+<pre><code>## [1] &quot;4&quot;        &quot;SHM&quot;      &quot;Budset_p&quot;
 </code></pre>
 
-<pre><code>## [1] 5
+<pre><code>## [1] &quot;5&quot;                    &quot;LAT&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;6&quot;                  &quot;DD_0&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;7&quot;        &quot;EMT&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;8&quot;                  &quot;EMT&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;9&quot;                    &quot;MCMT&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;10&quot;       &quot;MSP&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;11&quot;                &quot;ELEVATION&quot;         &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;12&quot;       &quot;EXT&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;13&quot;                &quot;DD5&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;14&quot;       &quot;DD_0&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;15&quot;                 &quot;TD&quot;                 &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;16&quot;                 &quot;MAT&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;17&quot;                &quot;EXT&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;18&quot;                &quot;Eref&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;19&quot;                   &quot;EMT&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;20&quot;                &quot;MWMT&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;21&quot;                &quot;DD5&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;22&quot;                &quot;NFFD&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;23&quot;       &quot;MCMT&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;24&quot;                   &quot;DD_0&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;25&quot;                &quot;MWMT&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;26&quot;       &quot;MAT&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;27&quot;                &quot;EXT&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;28&quot;                   &quot;TD&quot;                   &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;29&quot;                &quot;CMD&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;30&quot;       &quot;NFFD&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;31&quot;                &quot;MAT&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;32&quot;                &quot;Eref&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;33&quot;                &quot;bFFP&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;34&quot;                &quot;SHM&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;35&quot;                &quot;NFFD&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;36&quot;                &quot;MAT&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;37&quot;                   &quot;MAP&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;38&quot;                &quot;FFP&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;39&quot;                 &quot;Eref&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;40&quot;       &quot;Eref&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;41&quot;                &quot;bFFP&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;42&quot;                 &quot;MAP&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;43&quot;        &quot;ELEVATION&quot; &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;44&quot;                &quot;FFP&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;45&quot;         &quot;EXT&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;46&quot;             &quot;ELEVATION&quot;      &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;47&quot;                   &quot;eFFP&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;48&quot;       &quot;DD5&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;49&quot;                   &quot;PAS&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;50&quot;         &quot;PAS&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;51&quot;                         &quot;NFFD&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;52&quot;         &quot;MWMT&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;53&quot;       &quot;MWMT&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;54&quot;                   &quot;MAT&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;55&quot;            &quot;EXT&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;56&quot;                         &quot;eFFP&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;57&quot;                 &quot;eFFP&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;58&quot;                         &quot;FFP&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;59&quot;                         &quot;EMT&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;60&quot;         &quot;ELEVATION&quot;  &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;61&quot;         &quot;DD5&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;62&quot;            &quot;DD5&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;63&quot;         &quot;bFFP&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;64&quot;                  &quot;AHM&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;65&quot;                &quot;AHM&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;66&quot;                   &quot;PAS&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;67&quot;            &quot;MWMT&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;68&quot;       &quot;LONG&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;69&quot;                  &quot;EXT&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;70&quot;            &quot;Eref&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;71&quot;       &quot;eFFP&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;72&quot;                &quot;DD_0&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;73&quot;                &quot;CMD&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;74&quot;                    &quot;AHM&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;75&quot;                &quot;AHM&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;76&quot;            &quot;AHM&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;77&quot;                &quot;MCMT&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;78&quot;                &quot;MAT&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;79&quot;                &quot;EMT&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;80&quot;                        &quot;ELEVATION&quot;                
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;81&quot;            &quot;ELEVATION&quot;     &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;82&quot;                   &quot;ELEVATION&quot;            &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;83&quot;                &quot;PAS&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;84&quot;                 &quot;PAS&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;85&quot;            &quot;NFFD&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;86&quot;                    &quot;MAP&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;87&quot;                   &quot;LAT&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;88&quot;         &quot;ELEVATION&quot;  &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;89&quot;                &quot;eFFP&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;90&quot;                  &quot;DD5&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;91&quot;                         &quot;DD5&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;92&quot;                &quot;DD_0&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;93&quot;            &quot;CMD&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;94&quot;                 &quot;NFFD&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;95&quot;                  &quot;MWMT&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;96&quot;                         &quot;MWMT&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;97&quot;                         &quot;MAT&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;98&quot;                &quot;MSP&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;99&quot;                  &quot;Eref&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;100&quot;        &quot;Eref&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;101&quot;                 &quot;ELEVATION&quot;           &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;102&quot;               &quot;DD_0&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;103&quot;                 &quot;CMD&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;104&quot;                        &quot;bFFP&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;105&quot;        &quot;bFFP&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;106&quot;           &quot;bFFP&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;107&quot;               &quot;SHM&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;108&quot;        &quot;NFFD&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;109&quot;           &quot;FFP&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;110&quot;        &quot;FFP&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;111&quot;               &quot;EMT&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;112&quot;        &quot;DD5&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;113&quot;                        &quot;DD_0&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;114&quot;        &quot;CMD&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;115&quot;                       &quot;bFFP&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;116&quot;        &quot;AHM&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;117&quot;                  &quot;TD&quot;                   &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;118&quot;           &quot;SHM&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;119&quot;      &quot;PAS&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;120&quot;               &quot;NFFD&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;121&quot;                       &quot;NFFD&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;122&quot;                  &quot;NFFD&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;123&quot;                        &quot;MCMT&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;124&quot;           &quot;MAT&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;125&quot;                  &quot;MAP&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;126&quot;        &quot;FFP&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;127&quot;      &quot;FFP&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;128&quot;                  &quot;Eref&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;129&quot;                        &quot;ELEVATION&quot;                 
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;130&quot;               &quot;eFFP&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;131&quot;            &quot;DD5&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;132&quot;                   &quot;TD&quot;                    &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;133&quot;        &quot;TD&quot;         &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;134&quot;                 &quot;SHM&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;135&quot;                 &quot;NFFD&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;136&quot;            &quot;NFFD&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;137&quot;        &quot;MWMT&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;138&quot;                 &quot;MAP&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;139&quot;               &quot;MAP&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;140&quot;            &quot;LAT&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;141&quot;                       &quot;FFP&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;142&quot;                   &quot;EXT&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;143&quot;                        &quot;EXT&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;144&quot;                &quot;EXT&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;145&quot;               &quot;ELEVATION&quot;         &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;146&quot;                       &quot;DD5&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;147&quot;                 &quot;bFFP&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;148&quot;      &quot;TD&quot;       &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;149&quot;        &quot;SHM&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;150&quot;                   &quot;PAS&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;151&quot;               &quot;PAS&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;152&quot;               &quot;MCMT&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;153&quot;               &quot;MCMT&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;154&quot;                  &quot;LAT&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;155&quot;        &quot;LAT&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;156&quot;               &quot;Eref&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;157&quot;                        &quot;Eref&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;158&quot;                   &quot;ELEVATION&quot;             &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;159&quot;                &quot;ELEVATION&quot;          &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;160&quot;               &quot;eFFP&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;161&quot;               &quot;DD5&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;162&quot;                   &quot;CMD&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;163&quot;            &quot;bFFP&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;164&quot;            &quot;SHM&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;165&quot;            &quot;MWMT&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;166&quot;        &quot;MAT&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;167&quot;        &quot;MSP&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;168&quot;                 &quot;FFP&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;169&quot;                  &quot;FFP&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;170&quot;               &quot;EMT&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;171&quot;                        &quot;CMD&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;172&quot;                &quot;CMD&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;173&quot;            &quot;AHM&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;174&quot;      &quot;AHM&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;175&quot;                 &quot;TD&quot;                  &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;176&quot;               &quot;TD&quot;                &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;177&quot;                        &quot;SHM&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;178&quot;                 &quot;PAS&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;179&quot;                  &quot;PAS&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;180&quot;        &quot;PAS&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;181&quot;           &quot;PAS&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;182&quot;        &quot;NFFD&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;183&quot;                   &quot;MWMT&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;184&quot;                       &quot;MWMT&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;185&quot;                  &quot;MCMT&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;186&quot;                 &quot;MAT&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;187&quot;            &quot;LONG&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;188&quot;           &quot;MAP&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;189&quot;                       &quot;LAT&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;190&quot;                 &quot;LAT&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;191&quot;               &quot;FFP&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;192&quot;            &quot;FFP&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;193&quot;                 &quot;EMT&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;194&quot;                  &quot;EMT&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;195&quot;                       &quot;eFFP&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;196&quot;                &quot;DD5&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;197&quot;            &quot;CMD&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;198&quot;                  &quot;AHM&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;199&quot;                   &quot;SHM&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;200&quot;                  &quot;SHM&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;201&quot;                       &quot;PAS&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;202&quot;                       &quot;MAT&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;203&quot;            &quot;MAT&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;204&quot;               &quot;MAP&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;205&quot;        &quot;MAP&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;206&quot;      &quot;LAT&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;207&quot;                &quot;FFP&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;208&quot;            &quot;EXT&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;209&quot;                   &quot;Eref&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;210&quot;                  &quot;ELEVATION&quot;            &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;211&quot;                  &quot;ELEVATION&quot;            &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;212&quot;                   &quot;DD5&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;213&quot;                  &quot;DD5&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;214&quot;                  &quot;CMD&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;215&quot;      &quot;bFFP&quot;     &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;216&quot;                  &quot;AHM&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;217&quot;           &quot;TD&quot;            &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;218&quot;                 &quot;PAS&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;219&quot;            &quot;PAS&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;220&quot;               &quot;MWMT&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;221&quot;                 &quot;MCMT&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;222&quot;               &quot;LONG&quot;              &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;223&quot;                 &quot;MSP&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;224&quot;           &quot;MSP&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;225&quot;                  &quot;MAP&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;226&quot;                        &quot;MAP&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;227&quot;               &quot;LAT&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;228&quot;               &quot;EXT&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;229&quot;                  &quot;EXT&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;230&quot;                  &quot;DD5&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;231&quot;                   &quot;bFFP&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;232&quot;                  &quot;TD&quot;                   &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;233&quot;        &quot;TD&quot;         &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;234&quot;                  &quot;MWMT&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;235&quot;               &quot;LONG&quot;              &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;236&quot;               &quot;MSP&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;237&quot;            &quot;MSP&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;238&quot;                  &quot;MSP&quot;                  &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;239&quot;               &quot;MAP&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;240&quot;            &quot;MAP&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;241&quot;                   &quot;LAT&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;242&quot;               &quot;LAT&quot;               &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;243&quot;                 &quot;EXT&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;244&quot;                 &quot;Eref&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;245&quot;                 &quot;eFFP&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;246&quot;           &quot;eFFP&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;247&quot;                 &quot;DD_0&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;248&quot;           &quot;DD_0&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;249&quot;               &quot;bFFP&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;250&quot;                  &quot;bFFP&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;251&quot;                  &quot;AHM&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;252&quot;                  &quot;MWMT&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;253&quot;                   &quot;MSP&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;254&quot;                        &quot;MSP&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;255&quot;        &quot;MSP&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;256&quot;                 &quot;MAP&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;257&quot;           &quot;EMT&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;258&quot;        &quot;eFFP&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;259&quot;               &quot;CMD&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;260&quot;        &quot;CMD&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;261&quot;                        &quot;TD&quot;                        
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;262&quot;                 &quot;TD&quot;                  &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;263&quot;            &quot;TD&quot;             &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;264&quot;               &quot;SHM&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;265&quot;                &quot;SHM&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;266&quot;                   &quot;NFFD&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;267&quot;                &quot;MWMT&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;268&quot;                        &quot;LONG&quot;                      
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;269&quot;                        &quot;LAT&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;270&quot;        &quot;LAT&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;271&quot;                   &quot;FFP&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;272&quot;            &quot;Eref&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;273&quot;                  &quot;EMT&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;274&quot;        &quot;eFFP&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;275&quot;            &quot;eFFP&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;276&quot;                  &quot;DD_0&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;277&quot;                 &quot;CMD&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;278&quot;                  &quot;bFFP&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;279&quot;                &quot;AHM&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;280&quot;               &quot;TD&quot;                &quot;Height_season_1_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;281&quot;                       &quot;TD&quot;                       
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;282&quot;                       &quot;SHM&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;283&quot;        &quot;SHM&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;284&quot;               &quot;PAS&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;285&quot;                 &quot;NFFD&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;286&quot;                 &quot;MWMT&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;287&quot;                   &quot;MCMT&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;288&quot;                  &quot;MCMT&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;289&quot;                 &quot;MAT&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;290&quot;                       &quot;LONG&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;291&quot;                 &quot;LAT&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;292&quot;                 &quot;FFP&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;293&quot;                  &quot;EXT&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;294&quot;                 &quot;eFFP&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;295&quot;                  &quot;eFFP&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;296&quot;                 &quot;DD_0&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;297&quot;                       &quot;AHM&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;298&quot;               &quot;TD&quot;                &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;299&quot;                 &quot;SHM&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;300&quot;                        &quot;PAS&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;301&quot;           &quot;MCMT&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;302&quot;               &quot;LONG&quot;              &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;303&quot;                  &quot;LONG&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;304&quot;                &quot;MSP&quot;                &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;305&quot;                  &quot;FFP&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;306&quot;        &quot;EMT&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;307&quot;               &quot;ELEVATION&quot;         &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;308&quot;                  &quot;DD5&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;309&quot;        &quot;DD_0&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;310&quot;            &quot;DD_0&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;311&quot;                  &quot;bFFP&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;312&quot;        &quot;MCMT&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;313&quot;        &quot;MAT&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;314&quot;                  &quot;LONG&quot;                 &quot;Winter_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;315&quot;                &quot;LONG&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;316&quot;                 &quot;MSP&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;317&quot;               &quot;LAT&quot;               &quot;Height_season_2_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;318&quot;           &quot;LAT&quot;           &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;319&quot;                   &quot;EMT&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;320&quot;                 &quot;EMT&quot;                 &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;321&quot;            &quot;EMT&quot;            &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;322&quot;                 &quot;DD5&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;323&quot;                  &quot;DD_0&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;324&quot;                       &quot;DD_0&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;325&quot;                       &quot;CMD&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;326&quot;                 &quot;AHM&quot;                 &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;327&quot;                  &quot;SHM&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;328&quot;                  &quot;NFFD&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;329&quot;                  &quot;NFFD&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;330&quot;                  &quot;MWMT&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;331&quot;                   &quot;MAT&quot;                   &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;332&quot;                  &quot;LONG&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;333&quot;               &quot;MSP&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;334&quot;                       &quot;EXT&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;335&quot;                       &quot;Eref&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;336&quot;        &quot;Eref&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;337&quot;        &quot;EMT&quot;        &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;338&quot;                  &quot;eFFP&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;339&quot;        &quot;DD_0&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;340&quot;                 &quot;bFFP&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;341&quot;                &quot;bFFP&quot;               &quot;Fall_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;342&quot;               &quot;AHM&quot;               &quot;Max_growth_rate_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;343&quot;                  &quot;SHM&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;344&quot;                 &quot;MCMT&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;345&quot;            &quot;MCMT&quot;           &quot;Shoot_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;346&quot;        &quot;LONG&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;347&quot;        &quot;LONG&quot;       &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;348&quot;                       &quot;MSP&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;349&quot;                       &quot;MAP&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;350&quot;        &quot;MAP&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;351&quot;                  &quot;FFP&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;352&quot;        &quot;EXT&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;353&quot;                  &quot;Eref&quot;                 &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;354&quot;                  &quot;Eref&quot;                 &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;355&quot;                       &quot;EMT&quot;                      
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;356&quot;                   &quot;DD_0&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;357&quot;        &quot;AHM&quot;        &quot;Budbreak_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;358&quot;                       &quot;MCMT&quot;                     
+## [3] &quot;X5_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;359&quot;                  &quot;MAT&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;360&quot;                   &quot;LONG&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;361&quot;                 &quot;LONG&quot;                &quot;root_wt__shoot_wt_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;362&quot;           &quot;LONG&quot;          &quot;Root_weight_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;363&quot;                  &quot;MSP&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;364&quot;                  &quot;MSP&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;365&quot;      &quot;MAP&quot;      &quot;Budset_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;366&quot;                  &quot;EXT&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;367&quot;                   &quot;eFFP&quot;                  &quot;root_wt__shoot_wt_p_1&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;368&quot;                  &quot;CMD&quot;                  &quot;Linear_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;369&quot;        &quot;MCMT&quot;       &quot;Diameter_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;370&quot;                  &quot;MAT&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;371&quot;                 &quot;LONG&quot;                &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;372&quot;                 &quot;ELEVATION&quot;           &quot;X5_95_growth_days_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;373&quot;                  &quot;CMD&quot;                  &quot;Spring_cold_injury_p&quot;
+</code></pre>
+
+<pre><code>## [1] &quot;374&quot;                        &quot;AHM&quot;                       
+## [3] &quot;X95_growth_complete_days_p&quot;
+</code></pre>
+
+<pre><code class="r">head(PE)
+</code></pre>
+
+<pre><code>##     Environment                   Phenotype pine_correlation
+## 190    Latitude      ColdInjuryFallS02_Mean            -0.42
+## 36          CMD                  BudSet_day             0.40
+## 275        MCMT      ColdInjuryFallS02_Mean             0.38
+## 342         SHM                  BudSet_day             0.37
+## 191    Latitude ColdInjuryMidWinterS02_Mean            -0.37
+## 54          DD0      ColdInjuryFallS02_Mean            -0.37
+##     spruce_correlation pine_score_super_g_raw pine_score_super_g
+## 190              -0.74               24.15438          19.454100
+## 36                0.33               18.97972          15.099421
+## 275               0.76               22.03100          21.998084
+## 342               0.25               12.25069           7.654826
+## 191              -0.62               22.56486          14.376012
+## 54               -0.74               21.27823          20.898606
+##     pine_score_super_t_raw pine_score_super_t pine_score_ALL
+## 190               29.81696           25.53098       9.436613
+## 36                21.32336           16.67241      21.309085
+## 275               28.07914           24.64387       8.481924
+## 342               13.85500            9.37160      16.011148
+## 191               27.64752           19.38109       7.823803
+## 54                26.74571           24.30750      11.937639
+</code></pre>
+
+<pre><code class="r">png(paste(&quot;analysis/Scores.png&quot;), width=5, height=18, units=&quot;in&quot;, res=300)
+ par(mfrow=c(5,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
+  plot(abs(PE$pine_correlation), PE$pine_score_ALL,  ylim=c(-50,50))
+  m1 &lt;- lm(PE$pine_score_ALL~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m1)
+</code></pre>
+
+<pre><code>## 
+## Call:
+## lm(formula = PE$pine_score_ALL ~ abs(PE$pine_correlation) + PE$Environment + 
+##     PE$Phenotype)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -31.717  -3.859   0.884   4.328  35.085 
+## 
+## Coefficients:
+##                                         Estimate Std. Error t value
+## (Intercept)                              -4.1871     3.2403  -1.292
+## abs(PE$pine_correlation)                 26.8304     7.6852   3.491
+## PE$EnvironmentbFFP                       -0.6296     3.4222  -0.184
+## PE$EnvironmentCMD                         9.4724     3.4226   2.768
+## PE$EnvironmentDD0                         3.1949     3.4218   0.934
+## PE$EnvironmentDD5                         4.0659     3.4395   1.182
+## PE$EnvironmenteFFP                        1.5178     3.4200   0.444
+## PE$EnvironmentElevation                  -2.5606     3.4409  -0.744
+## PE$EnvironmentEMT                         6.7718     3.4230   1.978
+## PE$EnvironmentEref                       12.1159     3.4260   3.537
+## PE$EnvironmentEXT                        12.1576     3.4289   3.546
+## PE$EnvironmentFFP                         1.9058     3.4226   0.557
+## PE$EnvironmentLatitude                   -4.0235     3.4222  -1.176
+## PE$Environmentlog(MAP)                   -5.6080     3.4199  -1.640
+## PE$Environmentlog(MSP)                    2.9951     3.4280   0.874
+## PE$EnvironmentLongitude                  -2.8317     3.4565  -0.819
+## PE$EnvironmentMAT                         9.4464     3.4268   2.757
+## PE$EnvironmentMCMT                        1.2307     3.4202   0.360
+## PE$EnvironmentMWMT                        3.4532     3.4286   1.007
+## PE$EnvironmentNFFD                        2.7120     3.4325   0.790
+## PE$EnvironmentPAS                        -8.2039     3.4236  -2.396
+## PE$EnvironmentSHM                         4.5251     3.4200   1.323
+## PE$EnvironmentTD                         -3.5039     3.4200  -1.025
+## PE$PhenotypeBudSet_day                    8.5470     3.1965   2.674
+## PE$PhenotypeColdInjuryFallS02_Mean        7.3358     3.0987   2.367
+## PE$PhenotypeColdInjuryMidWinterS02_Mean   7.1861     3.0735   2.338
+## PE$PhenotypeColdInjurySpringS02_Mean      0.4124     3.0067   0.137
+## PE$PhenotypeFinalRootWeightS02_g          6.0699     3.0277   2.005
+## PE$PhenotypeFinalShootWeightS02_g         6.8783     3.0082   2.286
+## PE$PhenotypeFinalStemDiamS02_mm           5.2766     3.0196   1.747
+## PE$PhenotypeGth5.95pctS02_Days            9.3599     3.0146   3.105
+## PE$PhenotypeGth5pctS02_Day                7.3547     3.0074   2.446
+## PE$PhenotypeGth95pctS02_Day               9.5682     3.0265   3.161
+## PE$PhenotypeHtFinalS01_mm                 4.1294     3.0961   1.334
+## PE$PhenotypeHtFinalS02_mm                 4.3212     3.1415   1.376
+## PE$PhenotypeLinearGthS02_Days             0.1106     3.0245   0.037
+## PE$PhenotypeMaxGthRate_mm_Day           -12.8789     3.0102  -4.278
+## PE$PhenotypeRootShoot_Ratio               6.5459     3.0156   2.171
+## PE$PhenotypeTotalWeight                   2.1784     3.0063   0.725
+##                                         Pr(&gt;|t|)    
+## (Intercept)                             0.197178    
+## abs(PE$pine_correlation)                0.000545 ***
+## PE$EnvironmentbFFP                      0.854141    
+## PE$EnvironmentCMD                       0.005961 ** 
+## PE$EnvironmentDD0                       0.351129    
+## PE$EnvironmentDD5                       0.237987    
+## PE$EnvironmenteFFP                      0.657458    
+## PE$EnvironmentElevation                 0.457299    
+## PE$EnvironmentEMT                       0.048709 *  
+## PE$EnvironmentEref                      0.000463 ***
+## PE$EnvironmentEXT                       0.000447 ***
+## PE$EnvironmentFFP                       0.578014    
+## PE$EnvironmentLatitude                  0.240560    
+## PE$Environmentlog(MAP)                  0.101983    
+## PE$Environmentlog(MSP)                  0.382896    
+## PE$EnvironmentLongitude                 0.413233    
+## PE$EnvironmentMAT                       0.006160 ** 
+## PE$EnvironmentMCMT                      0.719201    
+## PE$EnvironmentMWMT                      0.314585    
+## PE$EnvironmentNFFD                      0.430031    
+## PE$EnvironmentPAS                       0.017109 *  
+## PE$EnvironmentSHM                       0.186686    
+## PE$EnvironmentTD                        0.306330    
+## PE$PhenotypeBudSet_day                  0.007866 ** 
+## PE$PhenotypeColdInjuryFallS02_Mean      0.018480 *  
+## PE$PhenotypeColdInjuryMidWinterS02_Mean 0.019971 *  
+## PE$PhenotypeColdInjurySpringS02_Mean    0.890996    
+## PE$PhenotypeFinalRootWeightS02_g        0.045791 *  
+## PE$PhenotypeFinalShootWeightS02_g       0.022849 *  
+## PE$PhenotypeFinalStemDiamS02_mm         0.081473 .  
+## PE$PhenotypeGth5.95pctS02_Days          0.002066 ** 
+## PE$PhenotypeGth5pctS02_Day              0.014979 *  
+## PE$PhenotypeGth95pctS02_Day             0.001713 ** 
+## PE$PhenotypeHtFinalS01_mm               0.183202    
+## PE$PhenotypeHtFinalS02_mm               0.169884    
+## PE$PhenotypeLinearGthS02_Days           0.970858    
+## PE$PhenotypeMaxGthRate_mm_Day           2.46e-05 ***
+## PE$PhenotypeRootShoot_Ratio             0.030658 *  
+## PE$PhenotypeTotalWeight                 0.469205    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 9.971 on 335 degrees of freedom
+## Multiple R-squared:  0.4336, Adjusted R-squared:  0.3693 
+## F-statistic: 6.748 on 38 and 335 DF,  p-value: &lt; 2.2e-16
+</code></pre>
+
+<pre><code class="r">  abline(lm(PE$pine_score_ALL~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$pine_score_super_t,  ylim=c(-50,50))
+  m2 &lt;- lm(PE$pine_score_super_t~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m2)
+</code></pre>
+
+<pre><code>## 
+## Call:
+## lm(formula = PE$pine_score_super_t ~ abs(PE$pine_correlation) + 
+##     PE$Environment + PE$Phenotype)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -33.507  -7.514   0.197   6.465  57.339 
+## 
+## Coefficients:
+##                                         Estimate Std. Error t value
+## (Intercept)                              -9.5782     4.1449  -2.311
+## abs(PE$pine_correlation)                 29.9422     9.8307   3.046
+## PE$EnvironmentbFFP                       -2.5861     4.3776  -0.591
+## PE$EnvironmentCMD                         5.0377     4.3781   1.151
+## PE$EnvironmentDD0                         7.7027     4.3770   1.760
+## PE$EnvironmentDD5                         0.9489     4.3997   0.216
+## PE$EnvironmenteFFP                        1.6648     4.3747   0.381
+## PE$EnvironmentElevation                  -2.9867     4.4015  -0.679
+## PE$EnvironmentEMT                         8.6839     4.3786   1.983
+## PE$EnvironmentEref                        7.8218     4.3824   1.785
+## PE$EnvironmentEXT                         4.4277     4.3862   1.009
+## PE$EnvironmentFFP                         1.5151     4.3781   0.346
+## PE$EnvironmentLatitude                   -3.6078     4.3776  -0.824
+## PE$Environmentlog(MAP)                   -1.5652     4.3747  -0.358
+## PE$Environmentlog(MSP)                    0.0486     4.3850   0.011
+## PE$EnvironmentLongitude                  -0.5977     4.4215  -0.135
+## PE$EnvironmentMAT                        12.0030     4.3834   2.738
+## PE$EnvironmentMCMT                        7.1064     4.3750   1.624
+## PE$EnvironmentMWMT                        0.2073     4.3858   0.047
+## PE$EnvironmentNFFD                        2.9310     4.3908   0.668
+## PE$EnvironmentPAS                        -2.8626     4.3793  -0.654
+## PE$EnvironmentSHM                         0.9007     4.3747   0.206
+## PE$EnvironmentTD                         -3.1039     4.3748  -0.710
+## PE$PhenotypeBudSet_day                   13.7412     4.0889   3.361
+## PE$PhenotypeColdInjuryFallS02_Mean       15.2764     3.9637   3.854
+## PE$PhenotypeColdInjuryMidWinterS02_Mean  14.6651     3.9315   3.730
+## PE$PhenotypeColdInjurySpringS02_Mean     14.4442     3.8461   3.756
+## PE$PhenotypeFinalRootWeightS02_g          7.4025     3.8730   1.911
+## PE$PhenotypeFinalShootWeightS02_g         7.3695     3.8480   1.915
+## PE$PhenotypeFinalStemDiamS02_mm           7.7904     3.8625   2.017
+## PE$PhenotypeGth5.95pctS02_Days            3.9848     3.8561   1.033
+## PE$PhenotypeGth5pctS02_Day                2.5415     3.8470   0.661
+## PE$PhenotypeGth95pctS02_Day              -3.1831     3.8714  -0.822
+## PE$PhenotypeHtFinalS01_mm                 6.1315     3.9605   1.548
+## PE$PhenotypeHtFinalS02_mm                 3.7935     4.0185   0.944
+## PE$PhenotypeLinearGthS02_Days            11.2609     3.8689   2.911
+## PE$PhenotypeMaxGthRate_mm_Day            -0.4456     3.8506  -0.116
+## PE$PhenotypeRootShoot_Ratio               2.8733     3.8575   0.745
+## PE$PhenotypeTotalWeight                   1.3059     3.8456   0.340
+##                                         Pr(&gt;|t|)    
+## (Intercept)                             0.021448 *  
+## abs(PE$pine_correlation)                0.002505 ** 
+## PE$EnvironmentbFFP                      0.555084    
+## PE$EnvironmentCMD                       0.250690    
+## PE$EnvironmentDD0                       0.079356 .  
+## PE$EnvironmentDD5                       0.829375    
+## PE$EnvironmenteFFP                      0.703782    
+## PE$EnvironmentElevation                 0.497893    
+## PE$EnvironmentEMT                       0.048151 *  
+## PE$EnvironmentEref                      0.075193 .  
+## PE$EnvironmentEXT                       0.313477    
+## PE$EnvironmentFFP                       0.729519    
+## PE$EnvironmentLatitude                  0.410447    
+## PE$Environmentlog(MAP)                  0.720733    
+## PE$Environmentlog(MSP)                  0.991164    
+## PE$EnvironmentLongitude                 0.892559    
+## PE$EnvironmentMAT                       0.006507 ** 
+## PE$EnvironmentMCMT                      0.105248    
+## PE$EnvironmentMWMT                      0.962334    
+## PE$EnvironmentNFFD                      0.504884    
+## PE$EnvironmentPAS                       0.513772    
+## PE$EnvironmentSHM                       0.837007    
+## PE$EnvironmentTD                        0.478507    
+## PE$PhenotypeBudSet_day                  0.000868 ***
+## PE$PhenotypeColdInjuryFallS02_Mean      0.000139 ***
+## PE$PhenotypeColdInjuryMidWinterS02_Mean 0.000225 ***
+## PE$PhenotypeColdInjurySpringS02_Mean    0.000204 ***
+## PE$PhenotypeFinalRootWeightS02_g        0.056816 .  
+## PE$PhenotypeFinalShootWeightS02_g       0.056326 .  
+## PE$PhenotypeFinalStemDiamS02_mm         0.044500 *  
+## PE$PhenotypeGth5.95pctS02_Days          0.302180    
+## PE$PhenotypeGth5pctS02_Day              0.509296    
+## PE$PhenotypeGth95pctS02_Day             0.411539    
+## PE$PhenotypeHtFinalS01_mm               0.122530    
+## PE$PhenotypeHtFinalS02_mm               0.345842    
+## PE$PhenotypeLinearGthS02_Days           0.003848 ** 
+## PE$PhenotypeMaxGthRate_mm_Day           0.907940    
+## PE$PhenotypeRootShoot_Ratio             0.456881    
+## PE$PhenotypeTotalWeight                 0.734383    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 12.75 on 335 degrees of freedom
+## Multiple R-squared:  0.3051, Adjusted R-squared:  0.2263 
+## F-statistic: 3.871 on 38 and 335 DF,  p-value: 1.025e-11
+</code></pre>
+
+<pre><code class="r">  abline(lm(PE$pine_score_super_t~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$pine_score_super_t_raw,  ylim=c(-50,50))
+  m3 &lt;- lm(PE$pine_score_super_t_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m3)
+</code></pre>
+
+<pre><code>## 
+## Call:
+## lm(formula = PE$pine_score_super_t_raw ~ abs(PE$pine_correlation) + 
+##     PE$Environment + PE$Phenotype)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -35.566  -8.276  -0.612   7.843  56.322 
+## 
+## Coefficients:
+##                                         Estimate Std. Error t value
+## (Intercept)                             -14.4876     4.9466  -2.929
+## abs(PE$pine_correlation)                 32.7588    11.7321   2.792
+## PE$EnvironmentbFFP                       -3.8030     5.2244  -0.728
+## PE$EnvironmentCMD                         9.5557     5.2249   1.829
+## PE$EnvironmentDD0                        13.1935     5.2236   2.526
+## PE$EnvironmentDD5                         0.5029     5.2506   0.096
+## PE$EnvironmenteFFP                        4.4544     5.2209   0.853
+## PE$EnvironmentElevation                  -2.8135     5.2529  -0.536
+## PE$EnvironmentEMT                        14.6652     5.2255   2.806
+## PE$EnvironmentEref                        9.7430     5.2300   1.863
+## PE$EnvironmentEXT                         5.6614     5.2346   1.082
+## PE$EnvironmentFFP                         1.7146     5.2249   0.328
+## PE$EnvironmentLatitude                   -2.3968     5.2244  -0.459
+## PE$Environmentlog(MAP)                   -1.7864     5.2208  -0.342
+## PE$Environmentlog(MSP)                    5.7854     5.2331   1.106
+## PE$EnvironmentLongitude                   0.7187     5.2767   0.136
+## PE$EnvironmentMAT                        15.4344     5.2313   2.950
+## PE$EnvironmentMCMT                       13.5381     5.2212   2.593
+## PE$EnvironmentMWMT                       -1.4774     5.2341  -0.282
+## PE$EnvironmentNFFD                        4.4892     5.2400   0.857
+## PE$EnvironmentPAS                        -3.8629     5.2264  -0.739
+## PE$EnvironmentSHM                         4.9764     5.2209   0.953
+## PE$EnvironmentTD                         -4.1381     5.2209  -0.793
+## PE$PhenotypeBudSet_day                   17.6303     4.8798   3.613
+## PE$PhenotypeColdInjuryFallS02_Mean       18.3102     4.7304   3.871
+## PE$PhenotypeColdInjuryMidWinterS02_Mean  18.6953     4.6919   3.985
+## PE$PhenotypeColdInjurySpringS02_Mean     20.7253     4.5900   4.515
+## PE$PhenotypeFinalRootWeightS02_g          9.5772     4.6221   2.072
+## PE$PhenotypeFinalShootWeightS02_g         9.5082     4.5923   2.070
+## PE$PhenotypeFinalStemDiamS02_mm           8.6753     4.6096   1.882
+## PE$PhenotypeGth5.95pctS02_Days           10.4988     4.6020   2.281
+## PE$PhenotypeGth5pctS02_Day                4.7405     4.5911   1.033
+## PE$PhenotypeGth95pctS02_Day               6.2532     4.6202   1.353
+## PE$PhenotypeHtFinalS01_mm                 6.0232     4.7265   1.274
+## PE$PhenotypeHtFinalS02_mm                 5.7435     4.7957   1.198
+## PE$PhenotypeLinearGthS02_Days            15.6371     4.6172   3.387
+## PE$PhenotypeMaxGthRate_mm_Day            -1.4162     4.5953  -0.308
+## PE$PhenotypeRootShoot_Ratio               7.8893     4.6036   1.714
+## PE$PhenotypeTotalWeight                  -0.2136     4.5894  -0.047
+##                                         Pr(&gt;|t|)    
+## (Intercept)                             0.003636 ** 
+## abs(PE$pine_correlation)                0.005535 ** 
+## PE$EnvironmentbFFP                      0.467162    
+## PE$EnvironmentCMD                       0.068306 .  
+## PE$EnvironmentDD0                       0.012006 *  
+## PE$EnvironmentDD5                       0.923753    
+## PE$EnvironmenteFFP                      0.394160    
+## PE$EnvironmentElevation                 0.592585    
+## PE$EnvironmentEMT                       0.005301 ** 
+## PE$EnvironmentEref                      0.063351 .  
+## PE$EnvironmentEXT                       0.280237    
+## PE$EnvironmentFFP                       0.742999    
+## PE$EnvironmentLatitude                  0.646688    
+## PE$Environmentlog(MAP)                  0.732433    
+## PE$Environmentlog(MSP)                  0.269721    
+## PE$EnvironmentLongitude                 0.891743    
+## PE$EnvironmentMAT                       0.003397 ** 
+## PE$EnvironmentMCMT                      0.009935 ** 
+## PE$EnvironmentMWMT                      0.777913    
+## PE$EnvironmentNFFD                      0.392216    
+## PE$EnvironmentPAS                       0.460355    
+## PE$EnvironmentSHM                       0.341185    
+## PE$EnvironmentTD                        0.428575    
+## PE$PhenotypeBudSet_day                  0.000349 ***
+## PE$PhenotypeColdInjuryFallS02_Mean      0.000130 ***
+## PE$PhenotypeColdInjuryMidWinterS02_Mean 8.30e-05 ***
+## PE$PhenotypeColdInjurySpringS02_Mean    8.77e-06 ***
+## PE$PhenotypeFinalRootWeightS02_g        0.039024 *  
+## PE$PhenotypeFinalShootWeightS02_g       0.039175 *  
+## PE$PhenotypeFinalStemDiamS02_mm         0.060702 .  
+## PE$PhenotypeGth5.95pctS02_Days          0.023155 *  
+## PE$PhenotypeGth5pctS02_Day              0.302567    
+## PE$PhenotypeGth95pctS02_Day             0.176828    
+## PE$PhenotypeHtFinalS01_mm               0.203428    
+## PE$PhenotypeHtFinalS02_mm               0.231906    
+## PE$PhenotypeLinearGthS02_Days           0.000792 ***
+## PE$PhenotypeMaxGthRate_mm_Day           0.758127    
+## PE$PhenotypeRootShoot_Ratio             0.087505 .  
+## PE$PhenotypeTotalWeight                 0.962915    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 15.22 on 335 degrees of freedom
+## Multiple R-squared:  0.3213, Adjusted R-squared:  0.2443 
+## F-statistic: 4.173 on 38 and 335 DF,  p-value: 4.964e-13
+</code></pre>
+
+<pre><code class="r">  abline(lm(PE$pine_score_super_t_raw~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$pine_score_super_g,  ylim=c(-50,50))
+  m4&lt;- lm(PE$pine_score_super_g~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m4)
+</code></pre>
+
+<pre><code>## 
+## Call:
+## lm(formula = PE$pine_score_super_g ~ abs(PE$pine_correlation) + 
+##     PE$Environment + PE$Phenotype)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -32.016  -8.164   0.241   6.561  61.523 
+## 
+## Coefficients:
+##                                         Estimate Std. Error t value
+## (Intercept)                             -10.3813     4.2961  -2.416
+## abs(PE$pine_correlation)                 25.0596    10.1893   2.459
+## PE$EnvironmentbFFP                       -1.1360     4.5373  -0.250
+## PE$EnvironmentCMD                         5.1528     4.5378   1.136
+## PE$EnvironmentDD0                         7.7059     4.5367   1.699
+## PE$EnvironmentDD5                         0.9152     4.5601   0.201
+## PE$EnvironmenteFFP                        2.6160     4.5343   0.577
+## PE$EnvironmentElevation                  -0.7566     4.5621  -0.166
+## PE$EnvironmentEMT                         9.4942     4.5383   2.092
+## PE$EnvironmentEref                        5.9686     4.5422   1.314
+## PE$EnvironmentEXT                         2.6503     4.5462   0.583
+## PE$EnvironmentFFP                         2.7125     4.5378   0.598
+## PE$EnvironmentLatitude                   -2.4756     4.5373  -0.546
+## PE$Environmentlog(MAP)                   -0.7335     4.5343  -0.162
+## PE$Environmentlog(MSP)                    0.8490     4.5449   0.187
+## PE$EnvironmentLongitude                   0.3379     4.5828   0.074
+## PE$EnvironmentMAT                        11.7943     4.5433   2.596
+## PE$EnvironmentMCMT                        7.5600     4.5346   1.667
+## PE$EnvironmentMWMT                       -0.1633     4.5458  -0.036
+## PE$EnvironmentNFFD                        3.7528     4.5509   0.825
+## PE$EnvironmentPAS                        -1.8165     4.5391  -0.400
+## PE$EnvironmentSHM                         1.5458     4.5343   0.341
+## PE$EnvironmentTD                         -2.2481     4.5344  -0.496
+## PE$PhenotypeBudSet_day                   15.3850     4.2381   3.630
+## PE$PhenotypeColdInjuryFallS02_Mean       14.2855     4.1083   3.477
+## PE$PhenotypeColdInjuryMidWinterS02_Mean  13.9810     4.0749   3.431
+## PE$PhenotypeColdInjurySpringS02_Mean     15.0554     3.9864   3.777
+## PE$PhenotypeFinalRootWeightS02_g          7.5416     4.0142   1.879
+## PE$PhenotypeFinalShootWeightS02_g         7.1191     3.9884   1.785
+## PE$PhenotypeFinalStemDiamS02_mm           7.4656     4.0034   1.865
+## PE$PhenotypeGth5.95pctS02_Days            2.1898     3.9968   0.548
+## PE$PhenotypeGth5pctS02_Day                2.6400     3.9874   0.662
+## PE$PhenotypeGth95pctS02_Day              -5.2822     4.0126  -1.316
+## PE$PhenotypeHtFinalS01_mm                 5.3814     4.1050   1.311
+## PE$PhenotypeHtFinalS02_mm                 4.6261     4.1651   1.111
+## PE$PhenotypeLinearGthS02_Days            11.7898     4.0100   2.940
+## PE$PhenotypeMaxGthRate_mm_Day             0.4463     3.9910   0.112
+## PE$PhenotypeRootShoot_Ratio               4.4847     3.9982   1.122
+## PE$PhenotypeTotalWeight                   0.7512     3.9859   0.188
+##                                         Pr(&gt;|t|)    
+## (Intercept)                             0.016205 *  
+## abs(PE$pine_correlation)                0.014421 *  
+## PE$EnvironmentbFFP                      0.802459    
+## PE$EnvironmentCMD                       0.256963    
+## PE$EnvironmentDD0                       0.090331 .  
+## PE$EnvironmentDD5                       0.841058    
+## PE$EnvironmenteFFP                      0.564370    
+## PE$EnvironmentElevation                 0.868379    
+## PE$EnvironmentEMT                       0.037188 *  
+## PE$EnvironmentEref                      0.189739    
+## PE$EnvironmentEXT                       0.560310    
+## PE$EnvironmentFFP                       0.550399    
+## PE$EnvironmentLatitude                  0.585701    
+## PE$Environmentlog(MAP)                  0.871584    
+## PE$Environmentlog(MSP)                  0.851923    
+## PE$EnvironmentLongitude                 0.941259    
+## PE$EnvironmentMAT                       0.009848 ** 
+## PE$EnvironmentMCMT                      0.096415 .  
+## PE$EnvironmentMWMT                      0.971366    
+## PE$EnvironmentNFFD                      0.410171    
+## PE$EnvironmentPAS                       0.689277    
+## PE$EnvironmentSHM                       0.733381    
+## PE$EnvironmentTD                        0.620366    
+## PE$PhenotypeBudSet_day                  0.000327 ***
+## PE$PhenotypeColdInjuryFallS02_Mean      0.000573 ***
+## PE$PhenotypeColdInjuryMidWinterS02_Mean 0.000677 ***
+## PE$PhenotypeColdInjurySpringS02_Mean    0.000188 ***
+## PE$PhenotypeFinalRootWeightS02_g        0.061153 .  
+## PE$PhenotypeFinalShootWeightS02_g       0.075172 .  
+## PE$PhenotypeFinalStemDiamS02_mm         0.063082 .  
+## PE$PhenotypeGth5.95pctS02_Days          0.584132    
+## PE$PhenotypeGth5pctS02_Day              0.508361    
+## PE$PhenotypeGth95pctS02_Day             0.188944    
+## PE$PhenotypeHtFinalS01_mm               0.190774    
+## PE$PhenotypeHtFinalS02_mm               0.267503    
+## PE$PhenotypeLinearGthS02_Days           0.003509 ** 
+## PE$PhenotypeMaxGthRate_mm_Day           0.911025    
+## PE$PhenotypeRootShoot_Ratio             0.262806    
+## PE$PhenotypeTotalWeight                 0.850635    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 13.22 on 335 degrees of freedom
+## Multiple R-squared:  0.2787, Adjusted R-squared:  0.1968 
+## F-statistic: 3.406 on 38 and 335 DF,  p-value: 1.096e-09
+</code></pre>
+
+<pre><code class="r">  abline(lm(PE$pine_score_super_g~abs(PE$pine_correlation)))
+
+  plot(abs(PE$pine_correlation), PE$pine_score_super_g_raw,  ylim=c(-50,50))
+  m5 &lt;- lm(PE$pine_score_super_g_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
+  summary(m5)
+</code></pre>
+
+<pre><code>## 
+## Call:
+## lm(formula = PE$pine_score_super_g_raw ~ abs(PE$pine_correlation) + 
+##     PE$Environment + PE$Phenotype)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -34.545  -7.973  -0.208   7.304  60.221 
+## 
+## Coefficients:
+##                                         Estimate Std. Error t value
+## (Intercept)                             -13.0573     4.5731  -2.855
+## abs(PE$pine_correlation)                 25.2499    10.8464   2.328
+## PE$EnvironmentbFFP                       -2.5372     4.8300  -0.525
+## PE$EnvironmentCMD                         7.6844     4.8305   1.591
+## PE$EnvironmentDD0                        11.1080     4.8293   2.300
+## PE$EnvironmentDD5                         0.6928     4.8543   0.143
+## PE$EnvironmenteFFP                        3.5849     4.8267   0.743
+## PE$EnvironmentElevation                  -2.0131     4.8563  -0.415
+## PE$EnvironmentEMT                        12.1972     4.8310   2.525
+## PE$EnvironmentEref                        8.2439     4.8352   1.705
+## PE$EnvironmentEXT                         4.2889     4.8394   0.886
+## PE$EnvironmentFFP                         2.1403     4.8305   0.443
+## PE$EnvironmentLatitude                   -2.1661     4.8300  -0.448
+## PE$Environmentlog(MAP)                   -1.5897     4.8267  -0.329
+## PE$Environmentlog(MSP)                    3.2833     4.8381   0.679
+## PE$EnvironmentLongitude                   1.4884     4.8783   0.305
+## PE$EnvironmentMAT                        13.8948     4.8364   2.873
+## PE$EnvironmentMCMT                       11.1569     4.8271   2.311
+## PE$EnvironmentMWMT                       -0.6536     4.8389  -0.135
+## PE$EnvironmentNFFD                        4.3017     4.8444   0.888
+## PE$EnvironmentPAS                        -3.2756     4.8318  -0.678
+## PE$EnvironmentSHM                         3.5103     4.8267   0.727
+## PE$EnvironmentTD                         -3.5192     4.8268  -0.729
+## PE$PhenotypeBudSet_day                   16.7661     4.5114   3.716
+## PE$PhenotypeColdInjuryFallS02_Mean       16.8340     4.3733   3.849
+## PE$PhenotypeColdInjuryMidWinterS02_Mean  16.6667     4.3377   3.842
+## PE$PhenotypeColdInjurySpringS02_Mean     19.0304     4.2435   4.485
+## PE$PhenotypeFinalRootWeightS02_g          8.2730     4.2732   1.936
+## PE$PhenotypeFinalShootWeightS02_g         7.5968     4.2456   1.789
+## PE$PhenotypeFinalStemDiamS02_mm           7.8419     4.2616   1.840
+## PE$PhenotypeGth5.95pctS02_Days            7.8953     4.2546   1.856
+## PE$PhenotypeGth5pctS02_Day                4.0229     4.2445   0.948
+## PE$PhenotypeGth95pctS02_Day               2.6115     4.2714   0.611
+## PE$PhenotypeHtFinalS01_mm                 6.4126     4.3697   1.468
+## PE$PhenotypeHtFinalS02_mm                 5.7747     4.4337   1.302
+## PE$PhenotypeLinearGthS02_Days            15.1068     4.2686   3.539
+## PE$PhenotypeMaxGthRate_mm_Day             0.3431     4.2484   0.081
+## PE$PhenotypeRootShoot_Ratio               7.2352     4.2561   1.700
+## PE$PhenotypeTotalWeight                  -0.3901     4.2429  -0.092
+##                                         Pr(&gt;|t|)    
+## (Intercept)                             0.004569 ** 
+## abs(PE$pine_correlation)                0.020510 *  
+## PE$EnvironmentbFFP                      0.599718    
+## PE$EnvironmentCMD                       0.112591    
+## PE$EnvironmentDD0                       0.022055 *  
+## PE$EnvironmentDD5                       0.886595    
+## PE$EnvironmenteFFP                      0.458168    
+## PE$EnvironmentElevation                 0.678754    
+## PE$EnvironmentEMT                       0.012038 *  
+## PE$EnvironmentEref                      0.089125 .  
+## PE$EnvironmentEXT                       0.376121    
+## PE$EnvironmentFFP                       0.657994    
+## PE$EnvironmentLatitude                  0.654106    
+## PE$Environmentlog(MAP)                  0.742097    
+## PE$Environmentlog(MSP)                  0.497832    
+## PE$EnvironmentLongitude                 0.760471    
+## PE$EnvironmentMAT                       0.004325 ** 
+## PE$EnvironmentMCMT                      0.021422 *  
+## PE$EnvironmentMWMT                      0.892635    
+## PE$EnvironmentNFFD                      0.375193    
+## PE$EnvironmentPAS                       0.498283    
+## PE$EnvironmentSHM                       0.467571    
+## PE$EnvironmentTD                        0.466460    
+## PE$PhenotypeBudSet_day                  0.000237 ***
+## PE$PhenotypeColdInjuryFallS02_Mean      0.000142 ***
+## PE$PhenotypeColdInjuryMidWinterS02_Mean 0.000146 ***
+## PE$PhenotypeColdInjurySpringS02_Mean    1.01e-05 ***
+## PE$PhenotypeFinalRootWeightS02_g        0.053705 .  
+## PE$PhenotypeFinalShootWeightS02_g       0.074464 .  
+## PE$PhenotypeFinalStemDiamS02_mm         0.066636 .  
+## PE$PhenotypeGth5.95pctS02_Days          0.064371 .  
+## PE$PhenotypeGth5pctS02_Day              0.343925    
+## PE$PhenotypeGth95pctS02_Day             0.541351    
+## PE$PhenotypeHtFinalS01_mm               0.143178    
+## PE$PhenotypeHtFinalS02_mm               0.193659    
+## PE$PhenotypeLinearGthS02_Days           0.000458 ***
+## PE$PhenotypeMaxGthRate_mm_Day           0.935682    
+## PE$PhenotypeRootShoot_Ratio             0.090065 .  
+## PE$PhenotypeTotalWeight                 0.926801    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 14.07 on 335 degrees of freedom
+## Multiple R-squared:  0.2971, Adjusted R-squared:  0.2173 
+## F-statistic: 3.726 on 38 and 335 DF,  p-value: 4.429e-11
+</code></pre>
+
+<pre><code class="r">  abline(lm(PE$pine_score_super_g_raw~abs(PE$pine_correlation)))
+dev.off()
+</code></pre>
+
+<pre><code>## quartz_off_screen 
+##                 7
 </code></pre>
 
 </body>
