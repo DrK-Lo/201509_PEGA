@@ -33,7 +33,11 @@ markdownToHTML("AnalysisPEGA.md", "AnalysisPEGA.html")  # converts an md file to
 setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
   if (!("hexbin" %in% installed.packages())){install.packages("hexbin")}
   library(hexbin)
-library(gridExtra)
+  if (!("gridExtra" %in% installed.packages())){install.packages("ash")}
+  library(gridExtra)
+  if (!("ash" %in% installed.packages())){install.packages("ash")}
+  library(ash)
+
 ### load data
 PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
 #reorder to make largest effects on top
@@ -48,6 +52,7 @@ head(flip)
 
 results_head <- scan("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", what = "character", nlines = 1)
 results_head
+
 #### read in results if it doesn't exist
 if (!("results" %in% ls())){
 results <- read.table("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
@@ -65,24 +70,16 @@ dim(results)
 
 ### Get list of superoutliers
   pine_super_t <- as.character(pine_tcontig$pine[pine_tcontig$super_outlier_score > 1])
+  pine_indexes_super_t <- which(as.character(results$tcontig) %in% pine_super_t)
+
   pine_super_t_raw <- as.character(pine_raw_tcontig$pine[pine_raw_tcontig$super_outlier_score > 1])
+  pine_indexes_super_t_raw <- which(as.character(results$tcontig) %in% pine_super_t_raw)
+
   pine_super_g <- as.character(pine_gcontig$pine[pine_gcontig$super_outlier_score > 1])
+  pine_indexes_super_g <- which(as.character(results$gcontig) %in% pine_super_g)
+
   pine_super_g_raw <- as.character(pine_raw_gcontig$pine[pine_raw_gcontig$super_outlier_score > 1])
-
-### Get indexes of superoutliers in 'results' dataframe
-get_index <- function(superlist, t_or_g){
-  # t_or_g is transcript or genomic contig
-  super_results <- NULL
-  for (j in 1:length(superlist)){
-     if (t_or_g=="t"){ind <- which(as.character(results$tcontig) %in% superlist[j])}
-     if (t_or_g=="g"){ind <- which(as.character(results$gcontig) %in% superlist[j])}
-     super_results <- c(super_results, ind)
-     if (j%%100==0){print(c(j, length(ind)))}
-    }
-  return(super_results)
-}
-
-  indexes_super_t <- get_index(pine_super_t, "t")
+  pine_indexes_super_g_raw <- which(as.character(results$gcontig) %in% pine_super_g_raw)
 
 
 ### Loop through PE file
@@ -134,25 +131,45 @@ if (!(identical(flip$gcontig__gcontig_pos, results$gcontig__gcontig_pos))){
 
 
 ### Plotting 
-install.packages("ash")
-library(ash)
 
-plotter <- function(GWAS_effect, GEA_rho_polarized, main){
+
+GWAS_effect_standardized <- GWAS_effect/sd(GWAS_effect, na.rm=TRUE)
+
+plotter <- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
   data1 <- cbind(GWAS_effect, GEA_rho_polarized)
   data1b <- data1[complete.cases(data1),]
-  binned <- bin2(data1b, 
+  score1 <- sum(data1b[,1]*data1b[,2])
+  score <- score1/nrow(data1b)*10000
+  if(is.standard==FALSE){
+    binned <- bin2(data1b, 
                  matrix(c(-3,3,-0.5,0.5), 2,2, byrow=TRUE), 
                  nbin=c(100,100))
-  binned$nc[binned$nc==0]=NA
-  image.plot(seq(-3,3,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+    binned$nc[binned$nc==0]=NA
+    image.plot(seq(-3,3,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
              xlab="GWAS effect", ylab="GEA rho (polarized)", main=main)
+    #text(2.9,0.45, round(score,1))
+  }
+  if(is.standard==TRUE){
+    binned <- bin2(data1b, 
+                 matrix(c(-10,10,-0.5,0.5), 2,2, byrow=TRUE), 
+                 nbin=c(100,100))
+    binned$nc[binned$nc==0]=NA
+    image.plot(seq(-10,10,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+             xlab="GWAS effect standardized", ylab="GEA rho (polarized)", main=paste(main, ", Score = ",round(score,1)))
+  }
   }
 
-pdf("Pine.pdf", height=14, width=4)
-  par(mfrow=c(5,1), mar=c(4,4,4,1))
-  plotter(GWAS_effect, GEA_rho_polarized, main="All SNPs")
-  plotter(GWAS_effect[indexes_super_t], GEA_rho_polarized[indexes_super_t], main="Super tcontigs")
+pdf("Pine.pdf", height=16, width=4)
+  par(mfrow=c(6,1), mar=c(4,4,4,1))
+  plotter(GWAS_effect, GEA_rho_polarized, main="All SNPs", is.standard=FALSE)
+  plotter(GWAS_effect_standardized, GEA_rho_polarized, main="All SNPs Standardized", is.standard=TRUE)
+  plotter(GWAS_effect_standardized[pine_indexes_super_t], GEA_rho_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+  plotter(GWAS_effect_standardized[pine_indexes_super_t_raw], GEA_rho_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+  plotter(GWAS_effect_standardized[pine_indexes_super_g], GEA_rho_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+  plotter(GWAS_effect_standardized[pine_indexes_super_g_raw], GEA_rho_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
 dev.off()
+
+
 
   a<- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
   a_super_t <- hexbinplot(GEA_rho_polarized[indexes_super_t]~GWAS_effect[indexes_super_t], xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
