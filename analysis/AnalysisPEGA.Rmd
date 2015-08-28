@@ -170,46 +170,6 @@ pdf("Pine.pdf", height=16, width=4)
 dev.off()
 
 
-
-  a<- hexbinplot(GEA_rho_polarized~GWAS_effect, xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
-  a_super_t <- hexbinplot(GEA_rho_polarized[indexes_super_t]~GWAS_effect[indexes_super_t], xbnds=c(-5,5), ybnds=c(-1,1), xbins=100, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]) , xlim=c(-3,3), ylim=c(-0.5,0.5), aspect=1)
-   
-  par(mfrow=c(2,1), mar=c(4,4,1,1))
-  plot(a)
-  plot(a_super_t)
-library(gridExtra)    
-do.call(grid.arrange, c(list(plot(hxb), plot(hxb_super_t)), ncol=2))
-
-
- hxb<-hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
-  hxb_super_t <- hexbin(GWAS_effect[indexes_super_t], GEA_rho_polarized[indexes_super_t],xbnds=c(-5,5), ybnds=c(-1,1), xbins=100)
-
-plotscript <- function(superind){
-  pp<- plot(hxb)
-  pushHexport(pp$plot.vp)
-  x <- GWAS_effect[superind]
-  y <- GEA_rho_polarized[superind]
-    grid.points(x,y,gp=gpar(col=rgb(0,0,1,0.3)),
-                pch=20,size = unit(0.5, "char"))
-  popViewport()
-}
-plotscript(indexes_super_t)
-
-
-
-  png(paste("analysis/figure_byenvi/PEGA_",PE_envi_name,"_",i,"_",PE_pheno_name, ".png",sep=""), width=6, height=5, units="in", res=300)
-  par(mar=c(1,1,1,1))
-  plot(a)
-  #do.call(grid.arrange, c(a, ncol=1))
-  dev.off()
-
-  png(paste("analysis/figure_byPEcor/PEGA_",i, "_", PE_envi_name,"_",PE_pheno_name,"_",i, ".png",sep=""), width=6, height=5, units="in", res=300)
-  par(mar=c(1,1,1,1))
-  plot(a)
-  #do.call(grid.arrange, c(a, ncol=1))
-  dev.off()
-
-
   png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=6, height=5, units="in", res=300)
   par(mar=c(1,1,1,1))
 
