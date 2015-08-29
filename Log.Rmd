@@ -7,8 +7,25 @@ output: html_document
 
 This log is in Blog-style format (newest at top)
 
+## August 29, 2015
+I realized that one problem with my approach is that, even though I am comparing architectures for super outliers based on raw values or values corrected for population structure, I am only plotting the values of rho and GWAS that have been corrected by population structure.  Sam updated the RESULTS files today, time to re-download.
+```
+scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .
+scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .
+```
+
+## August 28, 2015
+Pine code is done, time to compare it to spruce.  
+
+``` 
+scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/flip.cor .
+scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .
+
+scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/super_outliers_per_variable_spruce_both_methods* .
+```
+
 ## August 24, 2015
-Download data to laptop.  I am in the directory /data of the project folder, and downloading these files the the "large_files" subfolder.  Files in that folder will not be synced to github, potentially causing it to crash.  You will have to download these files in order to run code on your laptop.  I'm not running it through hulk because of lack of visualization.
+Download pine data to laptop.  I am in the directory /data of the project folder, and downloading these files the the "large_files" subfolder.  Files in that folder will not be synced to github, potentially causing it to crash.  You will have to download these files in order to run code on your laptop.  I'm not running it through hulk because of lack of visualization.
 
 ```
 Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/flip.cor large_files

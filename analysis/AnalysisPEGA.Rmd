@@ -5,6 +5,8 @@ date: "August 24, 2015"
 output: html_document
 ---
 
+Does the degree to which SNPs evolve to be correlated with the environment depend on the phenotype-environment association of the phenotypes they are associated with?
+
 Basic algorithm:
 
 1. choose environment
@@ -48,6 +50,9 @@ PE <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv
 #reorder to make largest effects on top
 PE <- PE[rev(order(abs(PE$pine_correlation))),]
 head(PE)
+plot(PE$pine_correlation, PE$spruce_correlation, pch=20, col="blue")
+abline(0,1)
+abline(lm(PE$spruce_correlation~PE$pine_correlation), col="blue")
 
 PE_matchGWAS <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv", header=TRUE)
 PE_matchGEA <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv", header=TRUE)
@@ -55,13 +60,21 @@ PE_matchGEA <- read.csv("data/EnvironmentPhenotypeCorrelations-PineSpruce-spearm
 flip_pine <- read.table("data/large_files/flip_pine.cor", header=TRUE)
 head(flip_pine)
 
+flip_spruce <- read.table("data/large_files/flip_spruce.cor", header=TRUE)
+head(flip_spruce)
+
 #### read in results_pine if it doesn't exist
 if (!("results_pine" %in% ls())){
 results_pine <- read.table("data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
   }
 dim(results_pine)
 
-### Upload superoutliers file
+if (!("results_spruce" %in% ls())){
+results_spruce <- read.table("data/large_files/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
+  }
+dim(results_spruce)
+
+### Upload superoutliers file pine 
   pine_raw_tcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt", header=TRUE)
   pine_tcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_100x.txt", header=TRUE)
   pine_raw_gcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_gcontigs_100x_raw.txt", header=TRUE)
@@ -69,12 +82,25 @@ dim(results_pine)
 
   head(pine_tcontig)
   head(pine_gcontig)
+
+### Upload superoutliers file spruce 
+  spruce_raw_tcontig <- read.table("data/large_files/super_outliers_per_variable_spruce_both_methods_100x_raw.txt", header=TRUE)
+  spruce_tcontig <- read.table("data/large_files/super_outliers_per_variable_spruce_both_methods_100x.txt", header=TRUE)
+  spruce_raw_gcontig <- read.table("data/large_files/super_outliers_per_variable_spruce_both_methods_gcontigs_100x_raw.txt", header=TRUE)
+  spruce_gcontig <- read.table("data/large_files/super_outliers_per_variable_spruce_both_methods_gcontigs_100x.txt", header=TRUE)
+
+  head(spruce_tcontig)
+  head(spruce_gcontig)
+
+  results_pine_head <- names(results_pine)
+  results_spruce_head <- names(results_spruce)
+  results_spruce$gcontig__gcontig_pos <- paste(results_spruce$gcontig, results_spruce$pos_gcontig, sep="__")
 ```
 
 Get the list of superoutliers.  There are 4 types for each species: based on transcript or gcontig, and based on raw or corrected for population structure.
 
 ```{r, label="get list of superoutliers"}
-### Get list of superoutliers
+### Get list of superoutliers pine
   pine_super_t <- as.character(pine_tcontig$pine[pine_tcontig$super_outlier_score > 1])
   pine_indexes_super_t <- which(as.character(results_pine$tcontig) %in% pine_super_t)
 
@@ -88,9 +114,24 @@ Get the list of superoutliers.  There are 4 types for each species: based on tra
   pine_indexes_super_g_raw <- which(as.character(results_pine$gcontig) %in% pine_super_g_raw)
 
   PE$pine_score_ALL <- PE$pine_score_super_t <- PE$pine_score_super_t_raw <- PE$pine_score_super_g <- PE$pine_score_super_g_raw <- NA
+
+### Get list of superoutliers spruce
+  spruce_super_t <- as.character(spruce_tcontig$spruce[spruce_tcontig$super_outlier_score > 1])
+  spruce_indexes_super_t <- which(as.character(results_spruce$tcontig) %in% spruce_super_t)
+
+  spruce_super_t_raw <- as.character(spruce_raw_tcontig$spruce[spruce_raw_tcontig$super_outlier_score > 1])
+  spruce_indexes_super_t_raw <- which(as.character(results_spruce$tcontig) %in% spruce_super_t_raw)
+
+  spruce_super_g <- as.character(spruce_gcontig$spruce[spruce_gcontig$super_outlier_score > 1])
+  spruce_indexes_super_g <- which(as.character(results_spruce$gcontig) %in% spruce_super_g)
+
+  spruce_super_g_raw <- as.character(spruce_raw_gcontig$spruce[spruce_raw_gcontig$super_outlier_score > 1])
+  spruce_indexes_super_g_raw <- which(as.character(results_spruce$gcontig) %in% spruce_super_g_raw)
+
+  PE$spruce_score_ALL <- PE$spruce_score_super_t <- PE$spruce_score_super_t_raw <- PE$spruce_score_super_g <- PE$spruce_score_super_g_raw <- NA
 ```
 
-Next, loop through each phenotype-environment combo.  For each combo, flip and polarize the GEA scores so they are in matching direction to the GWAS and PE.  Then, standardize the GWAS so that each phenotype has a variance of 1 and all slopes will be on the same scale.  Plot the architecture and calculate a score.  The score is based on the `sum(GWAS_effect_standardized * GEA_rho_polarized)/n_snps`.  So larger and more positive scores indicate architectures that have more and/or larger effect SNPs for that phenotype in that environment.
+Next, loop through each phenotype-environment combo.  For each combo, flip and polarize the GEA scores so they are in matching direction to the GWAS and PE.  Then, standardize the GWAS so that each phenotype has a variance of 1 and all slopes will be on the same scale.  Plot the architecture and calculate a score.  The score is based on the `sum(GWAS_effect_pine_standardized * GEA_rho_pine_polarized)/n_snps`.  So larger and more positive scores indicate architectures that have more and/or larger effect SNPs for that phenotype in that environment.
 
 ```{r, label="Loop through PE file"}
 ### Loop through PE file
@@ -105,46 +146,69 @@ for (i in 1:nrow(PE)){
   
   print(c(i, GEA_envi_name, GWAS_pheno_name))
 
-### Get relevant columns from large file
-  results_pine_head <- names(results_pine)
-  GWAS_effect_col <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
-  if (length(GWAS_effect_col)!=1){print("ERROR: GWAS_effect_col does not equal 1")}
-  GWAS_effect <- results_pine[,GWAS_effect_col]
+### Get relevant columns from large file (pine)
 
-  GEA_effect_cols <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
-  if (length(GEA_effect_cols)!=2){print("ERROR: GEA_effect_cols does not equal 2")}
-  GEA_rho <- rowMeans(results_pine[,GEA_effect_cols], na.rm=TRUE)
+  GWAS_effect_col_pine <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+  if (length(GWAS_effect_col_pine)!=1){print("ERROR: GWAS_effect_col_pine does not equal 1")}
+  GWAS_effect_pine <- results_pine[,GWAS_effect_col_pine]
+
+  GEA_effect_cols_pine <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
+  if (length(GEA_effect_cols_pine)!=2){print("ERROR: GEA_effect_cols_pine does not equal 2")}
+  GEA_rho_pine <- rowMeans(results_pine[,GEA_effect_cols_pine], na.rm=TRUE)
+
+### Get relevant columns from large file (spruce)
+  GWAS_effect_col_spruce <- which(results_spruce_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+  if (length(GWAS_effect_col_spruce)!=1){print("ERROR: GWAS_effect_col_spruce does not equal 1"); break}
+  GWAS_effect_spruce <- results_spruce[,GWAS_effect_col_spruce]
+
+  GEA_effect_cols_spruce <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_spruce_head)
+  if (length(GEA_effect_cols_spruce)!=2){print("ERROR: GEA_effect_cols_spruce does not equal 2"); break}
+  GEA_rho_spruce <- rowMeans(results_spruce[,GEA_effect_cols_spruce], na.rm=TRUE)
 
 ### check that "flip_pine"" order matches "results_pine" order
 if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_pos))){
-  print("ERROR!  SNP order in flip_pine file does not match results_pine file")
+  print("ERROR!  SNP order in flip_pine file does not match results_pine file"); break
+}
+if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gcontig_pos))){
+  print("ERROR!  SNP order in flip_spruce file does not match results_spruce file"); break
 }
 
-### flip_pine GEA_rho so sign matches GWAS_effect
-  GEA_rho_flip_pine <- GEA_rho * flip_pine$X1
+### flip_pine GEA_rho_pine so sign matches GWAS_effect_pine
+  GEA_rho_flip_pine <- GEA_rho_pine * flip_pine$X1
+  GEA_rho_flip_spruce <- GEA_rho_spruce * flip_spruce$X1
 
 ### Polarize GEA so sign aligns with PE and GWAS sign
-  PE_cor <- PE$pine_correlation[i]
+  PE_cor_pine <- PE$pine_correlation[i]
+  PE_cor_spruce <- PE$spruce_correlation[i]
 
-  GWAS_sign <- sign(GWAS_effect)
-  GWAS_sign[GWAS_sign==0]=1
+  GWAS_sign_pine <- sign(GWAS_effect_pine)
+  GWAS_sign_pine[GWAS_sign_pine==0]=1
+  GWAS_sign_spruce <- sign(GWAS_effect_spruce)
+  GWAS_sign_spruce[GWAS_sign_spruce==0]=1
 
-  if (sum(GWAS_sign==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_pine")} #fixed this with code below
+  if (sum(GWAS_sign_pine==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_pine")} #fixed this with code above
+  if (sum(GWAS_sign_spruce==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_spruce")} #fixed this with code above
 
-  if(PE_cor != 0){
-  GEA_rho_polarized <- GEA_rho_flip_pine * sign(PE_cor) * GWAS_sign
+  if(PE_cor_pine != 0){
+  GEA_rho_pine_polarized <- GEA_rho_flip_pine * sign(PE_cor_pine) * GWAS_sign_pine
   }else{
-  GEA_rho_polarized <- GEA_rho_flip_pine * GWAS_sign  
+  GEA_rho_pine_polarized <- GEA_rho_flip_pine * GWAS_sign_pine  
+  }
+
+ if(PE_cor_spruce != 0){
+  GEA_rho_spruce_polarized <- GEA_rho_flip_spruce * sign(PE_cor_spruce) * GWAS_sign_spruce
+  }else{
+  GEA_rho_spruce_polarized <- GEA_rho_flip_spruce * GWAS_sign_spruce  
   }
 
 #  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
-  #plot(hexbin(GWAS_effect, GEA_rho_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
+  #plot(hexbin(GWAS_effect_pine, GEA_rho_pine_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
 
 
 ### Plotting 
 
-
-GWAS_effect_standardized <- GWAS_effect/sd(GWAS_effect, na.rm=TRUE)
+GWAS_effect_pine_standardized <- GWAS_effect_pine/sd(GWAS_effect_pine, na.rm=TRUE)
+GWAS_effect_spruce_standardized <- GWAS_effect_spruce/sd(GWAS_effect_spruce, na.rm=TRUE)
 
 plotter <- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
   data1 <- cbind(GWAS_effect, GEA_rho_polarized)
@@ -153,34 +217,49 @@ plotter <- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
   score <- score1/nrow(data1b)*10000
   if(is.standard==FALSE){
     binned <- bin2(data1b, 
-                 matrix(c(-3,3,-0.5,0.5), 2,2, byrow=TRUE), 
+                 matrix(c(-8,8,-0.5,0.5), 2,2, byrow=TRUE), 
                  nbin=c(100,100))
     binned$nc[binned$nc==0]=NA
-    image.plot(seq(-3,3,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+    image.plot(seq(-8,8,length.out = 100), seq(-0.5,0.5, length.out=100),binned$nc,
              xlab="GWAS effect", ylab="GEA rho (polarized)", main=main)
     #text(2.9,0.45, round(score,1))
   }
   if(is.standard==TRUE){
     binned <- bin2(data1b, 
-                 matrix(c(-10,10,-0.5,0.5), 2,2, byrow=TRUE), 
+                 matrix(c(-13,13,-0.5,0.5), 2,2, byrow=TRUE), 
                  nbin=c(100,100))
     binned$nc[binned$nc==0]=NA
-    image.plot(seq(-10,10,length.out = 100), seq(-0.5, 0.5, length.out=100),binned$nc,
+    image.plot(seq(-13,13,length.out = 100), seq(-0.5,0.5, length.out=100),binned$nc,
              xlab="GWAS effect standardized", ylab="GEA rho (polarized)", main=paste(main, ", Score = ",round(score,1)))
   }
   return(score)
   }
 
-  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=5, height=18, units="in", res=300)
-  par(mfrow=c(6,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
-  plotter(GWAS_effect, GEA_rho_polarized, main="All SNPs", is.standard=FALSE)
-  PE$pine_score_ALL[i]<-plotter(GWAS_effect_standardized, GEA_rho_polarized, main="All SNPs Standardized", is.standard=TRUE)
-  PE$pine_score_super_t[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_t], GEA_rho_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
-  PE$pine_score_super_t_raw[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_t_raw], GEA_rho_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
-  PE$pine_score_super_g[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_g], GEA_rho_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
-  PE$pine_score_super_g_raw[i]<-plotter(GWAS_effect_standardized[pine_indexes_super_g_raw], GEA_rho_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
-  title("yo")
-  mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], sep=" "),
+  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=10, height=18, units="in", res=300)
+  par(mfrow=c(6,2), mar=c(4,4,4,1), oma=c(0,0,3,0))
+
+  plotter(GWAS_effect_pine, GEA_rho_pine_polarized, main="PINE All SNPs", is.standard=FALSE)
+  plotter(GWAS_effect_spruce, GEA_rho_spruce_polarized, main="SPRUCE All SNPs", is.standard=FALSE)
+
+  PE$pine_score_ALL[i]<-plotter(GWAS_effect_pine_standardized, GEA_rho_pine_polarized, main="All SNPs Standardized", is.standard=TRUE)
+  PE$spruce_score_ALL[i]<-plotter(GWAS_effect_spruce_standardized, GEA_rho_spruce_polarized, main="All SNPs Standardized", is.standard=TRUE)
+
+  PE$pine_score_super_t[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t], GEA_rho_pine_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+  PE$spruce_score_super_t[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t], GEA_rho_spruce_polarized[spruce_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+
+  PE$pine_score_super_t_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t_raw], GEA_rho_pine_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+  PE$spruce_score_super_t_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t_raw], GEA_rho_spruce_polarized[spruce_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+
+  PE$pine_score_super_g[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g], GEA_rho_pine_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+  PE$spruce_score_super_g[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g], GEA_rho_spruce_polarized[spruce_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+
+  PE$pine_score_super_g_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g_raw], GEA_rho_pine_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
+
+  PE$spruce_score_super_g_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g_raw], GEA_rho_spruce_polarized[spruce_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
+
+  title("") #not sure but needed to make mtext work
+  mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], 
+              "\nSpruce", PE$spruce_correlation[i], sep=" "),
         side=3, outer=TRUE, line=-1)
   dev.off()
 
@@ -191,37 +270,51 @@ Now that all the scores have been calculated, we can look at the relationship be
 
 ```{r, label="PE score analysis"}
 head(PE)
+  ylim=c(-70,70)
 
-png(paste("analysis/Scores.png"), width=5, height=18, units="in", res=300)
- par(mfrow=c(5,1), mar=c(4,4,4,1), oma=c(0,0,2,0))
-  plot(abs(PE$pine_correlation), PE$pine_score_ALL,  ylim=c(-50,50), 
-       col=as.numeric(PE$Phenotype), pch=20)
-  m1 <- lm(PE$pine_score_ALL~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
-  summary(m1)
-  abline(lm(PE$pine_score_ALL~abs(PE$pine_correlation)))
+plotter_score <- function(x,y, xlab,ylab){
+  plot(x, y,  ylim=c(-70,70), 
+       col=as.numeric(PE$Environment), pch=as.numeric(PE$Environment),
+       xlab=xlab, ylab=ylab)
+  m1 <- lm(y~x + PE$Environment + PE$Phenotype)
+  print(summary(m1))
+  abline(lm(y~x))
+  abline(0,0, col="grey")
+}
 
-  plot(abs(PE$pine_correlation), PE$pine_score_super_t,  ylim=c(-50,50), 
-       col=as.numeric(PE$Phenotype), pch=20)
-  m2 <- lm(PE$pine_score_super_t~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
-  summary(m2)
-  abline(lm(PE$pine_score_super_t~abs(PE$pine_correlation)))
+png(paste("analysis/Scores_Pine_Spruce_Envi.png"), width=10, height=18, units="in", res=300)
+ par(mfrow=c(5,2), mar=c(4,4,4,1), oma=c(0,0,2,0))
+  ### All results
+  plotter_score(abs(PE$pine_correlation), PE$pine_score_ALL, 
+                "PINE Abs(Pheno-Envi) Correlation", "PINE Score ALL")
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_ALL, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score ALL")
 
-  plot(abs(PE$pine_correlation), PE$pine_score_super_t_raw,  ylim=c(-50,50), 
-       col=as.numeric(PE$Phenotype), pch=20)
-  m3 <- lm(PE$pine_score_super_t_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
-  summary(m3)
-  abline(lm(PE$pine_score_super_t_raw~abs(PE$pine_correlation)))
+  ### tcontig results
+  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t, 
+                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t")
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t")
+  ### tcontig results RAW
+  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t_raw, 
+                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t_raw")
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t_raw, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t_raw")
 
-  plot(abs(PE$pine_correlation), PE$pine_score_super_g,  ylim=c(-50,50), 
-       col=as.numeric(PE$Phenotype), pch=20)
-  m4<- lm(PE$pine_score_super_g~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
-  summary(m4)
-  abline(lm(PE$pine_score_super_g~abs(PE$pine_correlation)))
-
-  plot(abs(PE$pine_correlation), PE$pine_score_super_g_raw,  ylim=c(-50,50), 
-       col=as.numeric(PE$Phenotype), pch=20)
-  m5 <- lm(PE$pine_score_super_g_raw~abs(PE$pine_correlation) + PE$Environment + PE$Phenotype)
-  summary(m5)
-  abline(lm(PE$pine_score_super_g_raw~abs(PE$pine_correlation)))
+  ### gcontig results
+  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g, 
+                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g")
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g")
+  ### gcontig results RAW
+  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g_raw, 
+                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g_raw")
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g_raw, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g_raw")
 dev.off()
 ```
+#plot allsnps vs super, expect super to be above 1:1 line
+
+# color by environment is different than by phenotype
+
+plot(PE$pine_score_super_t, PE$spruce_score_super_t,col=as.numeric(PE$Environment), pch=as.numeric(PE$Environment))
