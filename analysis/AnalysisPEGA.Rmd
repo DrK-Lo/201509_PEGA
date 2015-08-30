@@ -162,7 +162,10 @@ for (i in 1:nrow(PE)){
   if (length(GEA_effect_cols_pine_corrected)!=2){print("ERROR: GEA_effect_cols_pine_corrected does not equal 2")}
   GEA_rho_pine_corrected <- rowMeans(results_pine[,GEA_effect_cols_pine_corrected], na.rm=TRUE)
 
-  GWAS_effect_col_pine_raw <- which(results_pine_head==paste(GWAS_pheno_name, "_raw_rho", sep=""))
+  GWAS_pheno_name_raw <- GWAS_pheno_name  # next two lines fix a problem specific to pine df
+  if(GWAS_pheno_name=="root_wt__shoot_wt_p"){GWAS_pheno_name_raw <- "root_wt_shoot_wt_p"}
+  if(GWAS_pheno_name=="root_wt__shoot_wt_p_1"){GWAS_pheno_name_raw <- "root_wt_shoot_wt_p_1"} 
+  GWAS_effect_col_pine_raw <- which(results_pine_head==paste(GWAS_pheno_name_raw, "_raw_rho", sep=""))
   if (length(GWAS_effect_col_pine_raw)!=1){print("ERROR: GWAS_effect_col_pine_raw does not equal 1")}
   GWAS_effect_pine_raw <- results_pine[,GWAS_effect_col_pine_raw]
 
