@@ -216,7 +216,7 @@ gea_file <- paste("analysis/figure_raw_vs_corrected/", GEA_envi_name, ".pdf",sep
 if(!(file.exists(gea_file))){
 pdf(gea_file, width=5, height=8)
   par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
-  plot_compare(GEA_rho_pine_raw, # GEA_rho_pine_corrected OR GEA_rho_flip_pine_corrected, 
+  plot_compare(GEA_rho_pine_raw, #GEA_rho_pine_corrected, #OR GEA_rho_flip_pine_corrected, 
                xlab="GEA_rho_pine_raw", ylab="GEA_rho_pine_corrected",
                xlim=1, ylim=1)
 
@@ -239,91 +239,101 @@ if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gconti
   print("ERROR!  SNP order in flip_spruce file does not match results_spruce file"); break
 }
 
-### Polarize GEA so sign aligns with PE and GWAS sign
+### Polarize GEA so sign aligns with PE and GWAS sign: FOR CORRECTED VALUES ONLY
   PE_cor_pine <- PE$pine_correlation[i]
   PE_cor_spruce <- PE$spruce_correlation[i]
 
-  GWAS_sign_pine <- sign(GWAS_effect_pine)
-  GWAS_sign_pine[GWAS_sign_pine==0]=1
-  GWAS_sign_spruce <- sign(GWAS_effect_spruce)
-  GWAS_sign_spruce[GWAS_sign_spruce==0]=1
+  GWAS_sign_pine_corrected <- sign(GWAS_effect_pine_corrected)
+  GWAS_sign_pine_corrected[GWAS_sign_pine_corrected==0]=1
+  GWAS_sign_spruce_corrected <- sign(GWAS_effect_spruce_corrected)
+  GWAS_sign_spruce_corrected[GWAS_sign_spruce_corrected==0]=1
 
-  if (sum(GWAS_sign_pine==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_pine")} #fixed this with code above
-  if (sum(GWAS_sign_spruce==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_spruce")} #fixed this with code above
+  if (sum(GWAS_sign_pine_corrected==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_pine")} #fixed this with code above
+  if (sum(GWAS_sign_spruce_corrected==0, na.rm=TRUE)>0){print("ERROR: Some GWAS have 0 sign for polarization, will skew results_spruce")} #fixed this with code above
 
+### Polarize GEA so sign aligns with PE and GWAS sign: FOR RAW VALUES ONLY
+  GWAS_sign_pine_raw <- sign(GWAS_effect_pine_raw)
+  GWAS_sign_pine_raw[GWAS_sign_pine_raw==0]=1
+  GWAS_sign_spruce_raw <- sign(GWAS_effect_spruce_raw)
+  GWAS_sign_spruce_raw[GWAS_sign_spruce_raw==0]=1
+
+### Do Polarization
   if(PE_cor_pine != 0){
-  GEA_rho_pine_polarized <- GEA_rho_flip_pine * sign(PE_cor_pine) * GWAS_sign_pine
+  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected * sign(PE_cor_pine) * GWAS_sign_pine_corrected
+  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw * sign(PE_cor_pine) * GWAS_sign_pine_raw
   }else{
-  GEA_rho_pine_polarized <- GEA_rho_flip_pine * GWAS_sign_pine  
+  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected * GWAS_sign_pine_corrected  
+  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw  * GWAS_sign_pine_raw
   }
 
  if(PE_cor_spruce != 0){
-  GEA_rho_spruce_polarized <- GEA_rho_flip_spruce * sign(PE_cor_spruce) * GWAS_sign_spruce
+  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected * sign(PE_cor_spruce) * GWAS_sign_spruce_corrected
+  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw * sign(PE_cor_spruce) * GWAS_sign_spruce_raw
   }else{
-  GEA_rho_spruce_polarized <- GEA_rho_flip_spruce * GWAS_sign_spruce  
+  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected * GWAS_sign_spruce_corrected 
+  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw * GWAS_sign_spruce_raw
   }
 
-#  plot(0,0, xlim=c(-3,3), ylim=c(-0.5,0.5), col=0, main=paste(PE_envi_name, PE_pheno_name, PE$pine_correlation[i]))
-  #plot(hexbin(GWAS_effect_pine, GEA_rho_pine_polarized,xbnds=c(-5,5), ybnds=c(-1,1), xbins=100), add=TRUE)
+### Standardize GWAS for corrected values
+
+GWAS_effect_pine_standardized_corrected <- GWAS_effect_pine_corrected/sd(GWAS_effect_pine_corrected, na.rm=TRUE)
+GWAS_effect_spruce_standardized_corrected <- GWAS_effect_spruce_corrected/sd(GWAS_effect_spruce_corrected, na.rm=TRUE)
+
+
+
 
 
 ### Plotting 
 
-GWAS_effect_pine_standardized <- GWAS_effect_pine/sd(GWAS_effect_pine, na.rm=TRUE)
-GWAS_effect_spruce_standardized <- GWAS_effect_spruce/sd(GWAS_effect_spruce, na.rm=TRUE)
-
-plotter <- function(GWAS_effect, GEA_rho_polarized, main, is.standard){
+plotter <- function(GWAS_effect, GEA_rho_polarized, main, xlim, ylim){
   data1 <- cbind(GWAS_effect, GEA_rho_polarized)
   data1b <- data1[complete.cases(data1),]
   score1 <- sum(data1b[,1]*data1b[,2])
-  score <- score1/nrow(data1b)*10000
-  if(is.standard==FALSE){
+  score1b <- round(score1/nrow(data1b)*10000,1)
+  score2 <- round(sum((sign(data1b[,1])*sign(data1b[,2]))==1)/nrow(data1b),2)
     binned <- bin2(data1b, 
-                 matrix(c(-8,8,-0.5,0.5), 2,2, byrow=TRUE), 
+                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
                  nbin=c(100,100))
+    if(binned$nskip!=0){print("Error in binning, some values not counted. This affects score."); break}
     binned$nc[binned$nc==0]=NA
-    image.plot(seq(-8,8,length.out = 100), seq(-0.5,0.5, length.out=100),binned$nc,
-             xlab="GWAS effect", ylab="GEA rho (polarized)", main=main)
-    #text(2.9,0.45, round(score,1))
-  }
-  if(is.standard==TRUE){
-    binned <- bin2(data1b, 
-                 matrix(c(-13,13,-0.5,0.5), 2,2, byrow=TRUE), 
-                 nbin=c(100,100))
-    binned$nc[binned$nc==0]=NA
-    image.plot(seq(-13,13,length.out = 100), seq(-0.5,0.5, length.out=100),binned$nc,
-             xlab="GWAS effect standardized", ylab="GEA rho (polarized)", main=paste(main, ", Score = ",round(score,1)))
-  }
-  return(score)
+    image.plot(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc,
+             xlab="GWAS effect standardized", ylab="GEA rho (polarized)", 
+             main=paste(main, ", Score1 =",score1b, "Score2 =", score2))
+  return(c(score1b, score2))
   }
 
   png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=10, height=18, units="in", res=300)
-  par(mfrow=c(6,2), mar=c(4,4,4,1), oma=c(0,0,3,0))
+  par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,3,0))
 
-  plotter(GWAS_effect_pine, GEA_rho_pine_polarized, main="PINE All SNPs", is.standard=FALSE)
-  plotter(GWAS_effect_spruce, GEA_rho_spruce_polarized, main="SPRUCE All SNPs", is.standard=FALSE)
+  #PE$pine_score_ALL[i]<-
+  plotter(GWAS_effect_pine_standardized_corrected, GEA_rho_pine_polarized_corrected, main="All SNPs Standardized", xlim=13, ylim=0.5)
+  #PE$spruce_score_ALL[i]<-
+  plotter(GWAS_effect_spruce_standardized_corrected, GEA_rho_spruce_polarized_corrected, main="All SNPs Standardized", xlim=13, ylim=0.5)
 
-  PE$pine_score_ALL[i]<-plotter(GWAS_effect_pine_standardized, GEA_rho_pine_polarized, main="All SNPs Standardized", is.standard=TRUE)
-  PE$spruce_score_ALL[i]<-plotter(GWAS_effect_spruce_standardized, GEA_rho_spruce_polarized, main="All SNPs Standardized", is.standard=TRUE)
-
-  PE$pine_score_super_t[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t], GEA_rho_pine_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
-  PE$spruce_score_super_t[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t], GEA_rho_spruce_polarized[spruce_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
-
-  PE$pine_score_super_t_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t_raw], GEA_rho_pine_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
-  PE$spruce_score_super_t_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t_raw], GEA_rho_spruce_polarized[spruce_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
-
-  PE$pine_score_super_g[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g], GEA_rho_pine_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
-  PE$spruce_score_super_g[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g], GEA_rho_spruce_polarized[spruce_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
-
-  PE$pine_score_super_g_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g_raw], GEA_rho_pine_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
-
-  PE$spruce_score_super_g_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g_raw], GEA_rho_spruce_polarized[spruce_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
-
-  title("") #not sure but needed to make mtext work
-  mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], 
-              "\nSpruce", PE$spruce_correlation[i], sep=" "),
-        side=3, outer=TRUE, line=-1)
+  plotter(GWAS_effect_pine_raw, GEA_rho_pine_polarized_raw, main="All SNPs RAW", xlim=1, ylim=1)
+  plotter(GWAS_effect_spruce_raw, GEA_rho_spruce_polarized_raw, main="All SNPs RAW", xlim=1, ylim=1)
   dev.off()
+
+#  plotter(GWAS_effect_pine_corrected, GEA_rho_pine_polarized_corrected, main="PINE All SNPs", is.standard=FALSE)
+#  plotter(GWAS_effect_spruce_corrected, GEA_rho_spruce_polarized_corrected, main="SPRUCE All SNPs", is.standard=FALSE)
+ #  PE$pine_score_super_t[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t], GEA_rho_pine_polarized[pine_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+#   PE$spruce_score_super_t[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t], GEA_rho_spruce_polarized[spruce_indexes_super_t], main="Super tcontigs", is.standard=TRUE)
+# 
+#   PE$pine_score_super_t_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_t_raw], GEA_rho_pine_polarized[pine_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+#   PE$spruce_score_super_t_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_t_raw], GEA_rho_spruce_polarized[spruce_indexes_super_t_raw], main="Super tcontigs RAW", is.standard=TRUE)
+# 
+#   PE$pine_score_super_g[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g], GEA_rho_pine_polarized[pine_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+#   PE$spruce_score_super_g[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g], GEA_rho_spruce_polarized[spruce_indexes_super_g], main="Super gcontigs", is.standard=TRUE)
+# 
+#   PE$pine_score_super_g_raw[i]<-plotter(GWAS_effect_pine_standardized[pine_indexes_super_g_raw], GEA_rho_pine_polarized[pine_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
+# 
+#   PE$spruce_score_super_g_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g_raw], GEA_rho_spruce_polarized[spruce_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
+# 
+#   title("") #not sure but needed to make mtext work
+#   mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], 
+#               "\nSpruce", PE$spruce_correlation[i], sep=" "),
+#         side=3, outer=TRUE, line=-1)
+
 
 } #end loop
 ```
