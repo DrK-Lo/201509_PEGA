@@ -148,23 +148,89 @@ for (i in 1:nrow(PE)){
 
 ### Get relevant columns from large file (pine)
 
-  GWAS_effect_col_pine <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
-  if (length(GWAS_effect_col_pine)!=1){print("ERROR: GWAS_effect_col_pine does not equal 1")}
-  GWAS_effect_pine <- results_pine[,GWAS_effect_col_pine]
+  GWAS_effect_col_pine_corrected <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+  if (length(GWAS_effect_col_pine_corrected)!=1){print("ERROR: GWAS_effect_col_pine_corrected does not equal 1")}
+  GWAS_effect_pine_corrected <- results_pine[,GWAS_effect_col_pine_corrected]
 
-  GEA_effect_cols_pine <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
-  if (length(GEA_effect_cols_pine)!=2){print("ERROR: GEA_effect_cols_pine does not equal 2")}
-  GEA_rho_pine <- rowMeans(results_pine[,GEA_effect_cols_pine], na.rm=TRUE)
+  GEA_effect_cols_pine_corrected <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
+  if (length(GEA_effect_cols_pine_corrected)!=2){print("ERROR: GEA_effect_cols_pine_corrected does not equal 2")}
+  GEA_rho_pine_corrected <- rowMeans(results_pine[,GEA_effect_cols_pine_corrected], na.rm=TRUE)
+
+  GWAS_effect_col_pine_raw <- which(results_pine_head==paste(GWAS_pheno_name, "_raw_rho", sep=""))
+  if (length(GWAS_effect_col_pine_raw)!=1){print("ERROR: GWAS_effect_col_pine_raw does not equal 1")}
+  GWAS_effect_pine_raw <- results_pine[,GWAS_effect_col_pine_raw]
+
+  GEA_effect_cols_pine_raw <- which(results_pine_head==paste(GEA_envi_name,"_raw_rho", sep=""))
+  if (length(GEA_effect_cols_pine_raw)!=1){print("ERROR: GEA_effect_cols_pine_raw does not equal 1")}
+  GEA_rho_pine_raw <- results_pine[,GEA_effect_cols_pine_raw]
 
 ### Get relevant columns from large file (spruce)
-  GWAS_effect_col_spruce <- which(results_spruce_head==gsub("_p","_snp_effect", GWAS_pheno_name))
-  if (length(GWAS_effect_col_spruce)!=1){print("ERROR: GWAS_effect_col_spruce does not equal 1"); break}
-  GWAS_effect_spruce <- results_spruce[,GWAS_effect_col_spruce]
+  GWAS_effect_col_spruce_corrected <- which(results_spruce_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+  if (length(GWAS_effect_col_spruce_corrected)!=1){print("ERROR: GWAS_effect_col_spruce_corrected does not equal 1")}
+  GWAS_effect_spruce_corrected <- results_spruce[,GWAS_effect_col_spruce_corrected]
 
-  GEA_effect_cols_spruce <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_spruce_head)
-  if (length(GEA_effect_cols_spruce)!=2){print("ERROR: GEA_effect_cols_spruce does not equal 2"); break}
-  GEA_rho_spruce <- rowMeans(results_spruce[,GEA_effect_cols_spruce], na.rm=TRUE)
+  GEA_effect_cols_spruce_corrected <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_spruce_head)
+  if (length(GEA_effect_cols_spruce_corrected)!=2){print("ERROR: GEA_effect_cols_spruce_corrected does not equal 2")}
+  GEA_rho_spruce_corrected <- rowMeans(results_spruce[,GEA_effect_cols_spruce_corrected], na.rm=TRUE)
 
+  GWAS_effect_col_spruce_raw <- which(results_spruce_head==paste(GWAS_pheno_name, "_raw_rho", sep=""))
+  if (length(GWAS_effect_col_spruce_raw)!=1){print("ERROR: GWAS_effect_col_spruce_raw does not equal 1")}
+  GWAS_effect_spruce_raw <- results_spruce[,GWAS_effect_col_spruce_raw]
+
+  GEA_effect_cols_spruce_raw <- which(results_spruce_head==paste(GEA_envi_name,"_raw_rho", sep=""))
+  if (length(GEA_effect_cols_spruce_raw)!=1){print("ERROR: GEA_effect_cols_spruce_raw does not equal 1")}
+  GEA_rho_spruce_raw <- results_spruce[,GEA_effect_cols_spruce_raw]
+
+### flip_pine GEA_rho_pine so sign matches GWAS_effect_pine
+  GEA_rho_flip_pine_corrected <- GEA_rho_pine_corrected * flip_pine$X1
+  GEA_rho_flip_spruce_corrected <- GEA_rho_spruce_corrected * flip_spruce$X1
+
+### plot corrected vs. raw values
+  plot_compare<- function(x,y, xlab, ylab, xlim, ylim){
+  data1 <- cbind(x, y)
+  data1b <- data1[complete.cases(data1),]
+        binned <- bin2(data1b, 
+                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
+                 nbin=c(100,100))
+    binned$nc[binned$nc==0]=NA
+    image(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc,
+             xlab=xlab, ylab=ylab, add=FALSE, col=tim.colors(75))
+  }
+
+### output plot to pdf
+gwas_file <- paste("analysis/figure_raw_vs_corrected/", GWAS_pheno_name, ".pdf",sep="")
+if(!(file.exists(gwas_file))){
+pdf(gwas_file, width=5, height=8)
+  par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
+  plot_compare(GWAS_effect_pine_raw,GWAS_effect_pine_corrected, 
+               xlab="GWAS_effect_pine_raw", ylab="GWAS_effect_pine_corrected",
+               xlim=1, ylim=3)
+  plot_compare(GWAS_effect_spruce_raw,GWAS_effect_spruce_corrected, 
+               xlab="GWAS_effect_spruce_raw", ylab="GWAS_effect_spruce_corrected",
+               xlim=1, ylim=8)
+  mtext(paste(GWAS_pheno_name), side=3, outer=TRUE)
+dev.off()
+}
+
+gea_file <- paste("analysis/figure_raw_vs_corrected/", GEA_envi_name, ".pdf",sep="")
+if(!(file.exists(gea_file))){
+pdf(gea_file, width=5, height=8)
+  par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
+  plot_compare(GEA_rho_pine_raw, # GEA_rho_pine_corrected OR GEA_rho_flip_pine_corrected, 
+               xlab="GEA_rho_pine_raw", ylab="GEA_rho_pine_corrected",
+               xlim=1, ylim=1)
+
+  plot_compare(GEA_rho_spruce_raw, #GEA_rho_spruce_corrected OR GEA_rho_flip_spruce_corrected, 
+               xlab="GEA_rho_spruce_raw", ylab="GEA_rho_spruce_corrected",
+               xlim=1, ylim=1)
+  mtext(paste(GEA_envi_name), side=3, outer=TRUE)
+dev.off()
+}
+```
+
+Flip and polarize
+
+```{r}
 ### check that "flip_pine"" order matches "results_pine" order
 if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_pos))){
   print("ERROR!  SNP order in flip_pine file does not match results_pine file"); break
@@ -172,10 +238,6 @@ if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_po
 if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gcontig_pos))){
   print("ERROR!  SNP order in flip_spruce file does not match results_spruce file"); break
 }
-
-### flip_pine GEA_rho_pine so sign matches GWAS_effect_pine
-  GEA_rho_flip_pine <- GEA_rho_pine * flip_pine$X1
-  GEA_rho_flip_spruce <- GEA_rho_spruce * flip_spruce$X1
 
 ### Polarize GEA so sign aligns with PE and GWAS sign
   PE_cor_pine <- PE$pine_correlation[i]

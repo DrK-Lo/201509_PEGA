@@ -7,6 +7,9 @@ output: html_document
 
 This log is in Blog-style format (newest at top)
 
+## August 30, 2015
+Today I was working with Sam's raw (uncorrected for population structure) Spearman's rho for GWAS and GEAs, but I realized that I don't know how he coded his alleles.  Was it alphabetical (like bayenv) or by minor allele (like GWAS)????  UGGGGGGGGGGG!  This is driving me crazy.
+
 ## August 29, 2015
 I realized that one problem with my approach is that, even though I am comparing architectures for super outliers based on raw values or values corrected for population structure, I am only plotting the values of rho and GWAS that have been corrected by population structure.  Sam updated the RESULTS files today, time to re-download.
 ```
