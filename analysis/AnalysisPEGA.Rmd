@@ -40,6 +40,8 @@ setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA")
   library(gridExtra)
   if (!("ash" %in% installed.packages())){install.packages("ash")}
   library(ash)
+  if (!("fields" %in% installed.packages())){install.packages("fields")}
+  library(fields)
 ```
 
 Load data, if not already loaded.  The phenotype and environment labels were not consistent among studies.  The `matchXXX` objects are used to match inconsistent labeling.
@@ -113,7 +115,9 @@ Get the list of superoutliers.  There are 4 types for each species: based on tra
   pine_super_g_raw <- as.character(pine_raw_gcontig$pine[pine_raw_gcontig$super_outlier_score > 1])
   pine_indexes_super_g_raw <- which(as.character(results_pine$gcontig) %in% pine_super_g_raw)
 
-  PE$pine_score_ALL <- PE$pine_score_super_t <- PE$pine_score_super_t_raw <- PE$pine_score_super_g <- PE$pine_score_super_g_raw <- NA
+  PE$pine_score1_ALL_corrected <- PE$pine_score2_ALL_corrected <- NA
+  PE$pine_score1_ALL_raw <- PE$pine_score2_ALL_raw <- NA
+  PE$pine_score_super_t <- PE$pine_score_super_t_raw <- PE$pine_score_super_g <- PE$pine_score_super_g_raw <- NA
 
 ### Get list of superoutliers spruce
   spruce_super_t <- as.character(spruce_tcontig$spruce[spruce_tcontig$super_outlier_score > 1])
@@ -128,7 +132,9 @@ Get the list of superoutliers.  There are 4 types for each species: based on tra
   spruce_super_g_raw <- as.character(spruce_raw_gcontig$spruce[spruce_raw_gcontig$super_outlier_score > 1])
   spruce_indexes_super_g_raw <- which(as.character(results_spruce$gcontig) %in% spruce_super_g_raw)
 
-  PE$spruce_score_ALL <- PE$spruce_score_super_t <- PE$spruce_score_super_t_raw <- PE$spruce_score_super_g <- PE$spruce_score_super_g_raw <- NA
+  PE$spruce_score1_ALL_corrected <- PE$spruce_score2_ALL_corrected <- NA
+  PE$spruce_score1_ALL_raw <- PE$spruce_score2_ALL_raw <- NA
+  PE$spruce_score_super_t <- PE$spruce_score_super_t_raw <- PE$spruce_score_super_g <- PE$spruce_score_super_g_raw <- NA
 ```
 
 Next, loop through each phenotype-environment combo.  For each combo, flip and polarize the GEA scores so they are in matching direction to the GWAS and PE.  Then, standardize the GWAS so that each phenotype has a variance of 1 and all slopes will be on the same scale.  Plot the architecture and calculate a score.  The score is based on the `sum(GWAS_effect_pine_standardized * GEA_rho_pine_polarized)/n_snps`.  So larger and more positive scores indicate architectures that have more and/or larger effect SNPs for that phenotype in that environment.
@@ -198,46 +204,42 @@ for (i in 1:nrow(PE)){
   }
 
 ### output plot to pdf
-gwas_file <- paste("analysis/figure_raw_vs_corrected/", GWAS_pheno_name, ".pdf",sep="")
-if(!(file.exists(gwas_file))){
-pdf(gwas_file, width=5, height=8)
-  par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
-  plot_compare(GWAS_effect_pine_raw,GWAS_effect_pine_corrected, 
-               xlab="GWAS_effect_pine_raw", ylab="GWAS_effect_pine_corrected",
-               xlim=1, ylim=3)
-  plot_compare(GWAS_effect_spruce_raw,GWAS_effect_spruce_corrected, 
-               xlab="GWAS_effect_spruce_raw", ylab="GWAS_effect_spruce_corrected",
-               xlim=1, ylim=8)
-  mtext(paste(GWAS_pheno_name), side=3, outer=TRUE)
-dev.off()
-}
+  gwas_file <- paste("analysis/figure_raw_vs_corrected/", GWAS_pheno_name, ".pdf",sep="")
+  if(!(file.exists(gwas_file))){
+  pdf(gwas_file, width=5, height=8)
+    par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
+    plot_compare(GWAS_effect_pine_raw,GWAS_effect_pine_corrected, 
+                 xlab="GWAS_effect_pine_raw", ylab="GWAS_effect_pine_corrected",
+                 xlim=1, ylim=5)
+    plot_compare(GWAS_effect_spruce_raw,GWAS_effect_spruce_corrected, 
+                 xlab="GWAS_effect_spruce_raw", ylab="GWAS_effect_spruce_corrected",
+                 xlim=1, ylim=13)
+    mtext(paste(GWAS_pheno_name), side=3, outer=TRUE)
+  dev.off()
+  } # end if 
 
-gea_file <- paste("analysis/figure_raw_vs_corrected/", GEA_envi_name, ".pdf",sep="")
-if(!(file.exists(gea_file))){
-pdf(gea_file, width=5, height=8)
-  par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
-  plot_compare(GEA_rho_pine_raw, #GEA_rho_pine_corrected, #OR GEA_rho_flip_pine_corrected, 
-               xlab="GEA_rho_pine_raw", ylab="GEA_rho_pine_corrected",
-               xlim=1, ylim=1)
+#  gea_file <- paste("analysis/figure_raw_vs_corrected/", GEA_envi_name, ".pdf",sep="")
+#  if(!(file.exists(gea_file))){
+#  pdf(gea_file, width=5, height=8)
+#    par(mfrow=c(2,1), mar=c(4,4,1,1),oma=c(0,0,3,0))
+#    plot_compare(GEA_rho_pine_raw, #GEA_rho_pine_corrected, #OR GEA_rho_flip_pine_corrected, 
+#                 xlab="GEA_rho_pine_raw", ylab="GEA_rho_pine_corrected",
+#                 xlim=1, ylim=1)
+  
+#    plot_compare(GEA_rho_spruce_raw, #GEA_rho_spruce_corrected OR GEA_rho_flip_spruce_corrected, 
+#                 xlab="GEA_rho_spruce_raw", ylab="GEA_rho_spruce_corrected",
+#                 xlim=1, ylim=1)
+#    mtext(paste(GEA_envi_name), side=3, outer=TRUE)
+#  dev.off()
+#  }#end if
 
-  plot_compare(GEA_rho_spruce_raw, #GEA_rho_spruce_corrected OR GEA_rho_flip_spruce_corrected, 
-               xlab="GEA_rho_spruce_raw", ylab="GEA_rho_spruce_corrected",
-               xlim=1, ylim=1)
-  mtext(paste(GEA_envi_name), side=3, outer=TRUE)
-dev.off()
-}
-```
-
-Flip and polarize
-
-```{r}
-### check that "flip_pine"" order matches "results_pine" order
-if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_pos))){
-  print("ERROR!  SNP order in flip_pine file does not match results_pine file"); break
-}
-if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gcontig_pos))){
-  print("ERROR!  SNP order in flip_spruce file does not match results_spruce file"); break
-}
+  ### check that "flip_pine"" order matches "results_pine" order
+  if (!(identical(flip_pine$gcontig__gcontig_pos, results_pine$gcontig__gcontig_pos))){
+    print("ERROR!  SNP order in flip_pine file does not match results_pine file"); break
+  }
+  if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gcontig_pos))){
+    print("ERROR!  SNP order in flip_spruce file does not match results_spruce file"); break
+  }
 
 ### Polarize GEA so sign aligns with PE and GWAS sign: FOR CORRECTED VALUES ONLY
   PE_cor_pine <- PE$pine_correlation[i]
@@ -274,18 +276,15 @@ if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gconti
   GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw #* GWAS_sign_spruce_raw
   }
 
-### Standardize GWAS for corrected values
-
-GWAS_effect_pine_standardized_corrected <- GWAS_effect_pine_corrected/sd(GWAS_effect_pine_corrected, na.rm=TRUE)
-GWAS_effect_spruce_standardized_corrected <- GWAS_effect_spruce_corrected/sd(GWAS_effect_spruce_corrected, na.rm=TRUE)
-
-
-
+  ### Standardize GWAS for corrected values
+  
+  GWAS_effect_pine_standardized_corrected <- GWAS_effect_pine_corrected/sd(GWAS_effect_pine_corrected, na.rm=TRUE)
+  GWAS_effect_spruce_standardized_corrected <- GWAS_effect_spruce_corrected/sd(GWAS_effect_spruce_corrected, na.rm=TRUE)
 
 
 ### Plotting 
 
-plotter <- function(GWAS_effect, GEA_rho_polarized, main, xlim, ylim){
+plotter <- function(GWAS_effect, GEA_rho_polarized, main, xlim, ylim, xlab, ylab){
   data1 <- cbind(GWAS_effect, GEA_rho_polarized)
   data1b <- data1[complete.cases(data1),]
   score1 <- sum(data1b[,1]*data1b[,2])
@@ -297,22 +296,45 @@ plotter <- function(GWAS_effect, GEA_rho_polarized, main, xlim, ylim){
     if(binned$nskip!=0){print("Error in binning, some values not counted. This affects score."); break}
     binned$nc[binned$nc==0]=NA
     image.plot(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc,
-             xlab="GWAS effect standardized", ylab="GEA rho (polarized)", 
+             xlab=xlab, ylab=ylab, 
              main=paste(main, ", Score1 =",score1b, "Score2 =", score2))
   return(c(score1b, score2))
   }
 
-  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=10, height=18, units="in", res=300)
-  par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,3,0))
+  png(paste("analysis/figure_byPheno/PEGA_" ,PE_pheno_name,"_",i, "_", PE_envi_name,".png",sep=""), width=10, height=10, units="in", res=300)
+  par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,3,3), cex.main=0.8)
 
-  #PE$pine_score_ALL[i]<-
-  plotter(GWAS_effect_pine_standardized_corrected, GEA_rho_pine_polarized_corrected, main="All SNPs Standardized", xlim=13, ylim=0.5)
-  #PE$spruce_score_ALL[i]<-
-  plotter(GWAS_effect_spruce_standardized_corrected, GEA_rho_spruce_polarized_corrected, main="All SNPs Standardized", xlim=13, ylim=0.5)
+  a.1 <- plotter(GWAS_effect_pine_standardized_corrected, GEA_rho_pine_polarized_corrected, 
+          main="All SNPs Standardized", xlim=20, ylim=1,
+          xlab = "GWAS corrected PINE", ylab="GEA corrected polarized PINE")
+      PE$pine_score1_ALL_corrected <- a.1[1]
+      PE$pine_score2_ALL_corrected <- a.1[2]
 
-  plotter(GWAS_effect_pine_raw, GEA_rho_pine_polarized_raw, main="All SNPs RAW", xlim=1, ylim=1)
-  plotter(GWAS_effect_spruce_raw, GEA_rho_spruce_polarized_raw, main="All SNPs RAW", xlim=1, ylim=1)
+  a.2 <- plotter(GWAS_effect_spruce_standardized_corrected, GEA_rho_spruce_polarized_corrected, 
+          main="All SNPs Standardized", xlim=20, ylim=1,
+          xlab = "GWAS corrected SPRUCE", ylab="GEA corrected polarized SPRUCE")
+      PE$spruce_score1_ALL_corrected <- a.2[1]
+      PE$spruce_score2_ALL_corrected <- a.2[2]
+
+  a.3 <- plotter(GWAS_effect_pine_raw, GEA_rho_pine_polarized_raw, 
+          main="All SNPs RAW", xlim=1, ylim=1,
+          xlab = "GWAS RAW PINE", ylab="GEA RAW polarized PINE")
+        PE$pine_score1_ALL_raw <- a.3[1]
+        PE$pine_score2_ALL_raw <- a.3[2]      
+
+  a.4 <- plotter(GWAS_effect_spruce_raw, GEA_rho_spruce_polarized_raw, 
+          main="All SNPs RAW", xlim=1, ylim=1,
+          xlab = "GWAS RAW SPRUCE", ylab="GEA RAW polarized SPRUCE")
+        PE$spruce_score1_ALL_raw <- a.4[1]
+        PE$spruce_score2_ALL_raw <- a.4[2]
+
+  title("") #not sure but needed to make mtext work
+   mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], 
+               "\nSpruce", PE$spruce_correlation[i], sep=" "),
+         side=3, outer=TRUE, line=-1)
   dev.off()
+} #end loop
+
 
 #  plotter(GWAS_effect_pine_corrected, GEA_rho_pine_polarized_corrected, main="PINE All SNPs", is.standard=FALSE)
 #  plotter(GWAS_effect_spruce_corrected, GEA_rho_spruce_polarized_corrected, main="SPRUCE All SNPs", is.standard=FALSE)
@@ -329,13 +351,7 @@ plotter <- function(GWAS_effect, GEA_rho_polarized, main, xlim, ylim){
 # 
 #   PE$spruce_score_super_g_raw[i]<-plotter(GWAS_effect_spruce_standardized[spruce_indexes_super_g_raw], GEA_rho_spruce_polarized[spruce_indexes_super_g_raw], main="Super gcontigs RAW", is.standard=TRUE)
 # 
-#   title("") #not sure but needed to make mtext work
-#   mtext(paste(PE_pheno_name, PE_envi_name, "\nPine", PE$pine_correlation[i], 
-#               "\nSpruce", PE$spruce_correlation[i], sep=" "),
-#         side=3, outer=TRUE, line=-1)
 
-
-} #end loop
 ```
 
 Now that all the scores have been calculated, we can look at the relationship between the PE association and the underlying architecture.  I expect that higher/larger PEs will have higher scores.  The code plots and summarizes the results of a linear model 
@@ -362,27 +378,27 @@ png(paste("analysis/Scores_Pine_Spruce_Envi.png"), width=10, height=18, units="i
   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_ALL, 
                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score ALL")
 
-  ### tcontig results
-  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t")
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t")
-  ### tcontig results RAW
-  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t_raw")
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t_raw")
-
-  ### gcontig results
-  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g")
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g")
-  ### gcontig results RAW
-  plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g_raw")
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g_raw")
+#   ### tcontig results
+#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t, 
+#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t")
+#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t, 
+#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t")
+#   ### tcontig results RAW
+#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t_raw, 
+#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t_raw")
+#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t_raw, 
+#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t_raw")
+# 
+#   ### gcontig results
+#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g, 
+#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g")
+#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g, 
+#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g")
+#   ### gcontig results RAW
+#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g_raw, 
+#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g_raw")
+#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g_raw, 
+#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g_raw")
 dev.off()
 ```
 #plot allsnps vs super, expect super to be above 1:1 line
