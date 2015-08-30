@@ -259,19 +259,19 @@ if (!(identical(as.character(flip_spruce$snp_id), results_spruce$gcontig__gconti
 
 ### Do Polarization
   if(PE_cor_pine != 0){
-  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected * sign(PE_cor_pine) * GWAS_sign_pine_corrected
-  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw * sign(PE_cor_pine) * GWAS_sign_pine_raw
+  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected * sign(PE_cor_pine) #* GWAS_sign_pine_corrected
+  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw * sign(PE_cor_pine) #* GWAS_sign_pine_raw
   }else{
-  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected * GWAS_sign_pine_corrected  
-  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw  * GWAS_sign_pine_raw
+  GEA_rho_pine_polarized_corrected <- GEA_rho_flip_pine_corrected #* GWAS_sign_pine_corrected  
+  GEA_rho_pine_polarized_raw <- GEA_rho_pine_raw  #* GWAS_sign_pine_raw
   }
 
  if(PE_cor_spruce != 0){
-  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected * sign(PE_cor_spruce) * GWAS_sign_spruce_corrected
-  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw * sign(PE_cor_spruce) * GWAS_sign_spruce_raw
+  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected * sign(PE_cor_spruce) #* GWAS_sign_spruce_corrected
+  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw * sign(PE_cor_spruce) #* GWAS_sign_spruce_raw
   }else{
-  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected * GWAS_sign_spruce_corrected 
-  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw * GWAS_sign_spruce_raw
+  GEA_rho_spruce_polarized_corrected <- GEA_rho_flip_spruce_corrected #* GWAS_sign_spruce_corrected 
+  GEA_rho_spruce_polarized_raw <- GEA_rho_spruce_raw #* GWAS_sign_spruce_raw
   }
 
 ### Standardize GWAS for corrected values
