@@ -69,14 +69,40 @@ img {
 
 
 <p>This log is in Blog-style format (newest at top)</p>
+<div id="august-30-2015" class="section level2">
+<h2>August 30, 2015</h2>
+<p>Today I was working with Sam’s raw (uncorrected for population structure) Spearman’s rho for GWAS and GEAs, but I realized that I don’t know how he coded his alleles. Was it alphabetical (like bayenv) or by minor allele (like GWAS)???? UGGGGGGGGGGG! This is driving me crazy.</p>
+<p>I still managed to get some cool results, see email to Sam and Kay sent today.</p>
+</div>
+<div id="august-29-2015" class="section level2">
+<h2>August 29, 2015</h2>
+<p>I realized that one problem with my approach is that, even though I am comparing architectures for super outliers based on raw values or values corrected for population structure, I am only plotting the values of rho and GWAS that have been corrected by population structure. Sam updated the RESULTS files today, time to re-download.</p>
+<pre><code>scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .
+scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .</code></pre>
+</div>
+<div id="august-28-2015" class="section level2">
+<h2>August 28, 2015</h2>
+<p>Pine code is done, time to compare it to spruce.</p>
+<pre><code>scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/flip.cor .
+scp klott@rogue.zoology.ubc.ca:/data/seqcap/adaptree2_seqcap/spruce/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS .
+
+scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/super_outliers_per_variable_spruce_both_methods* .</code></pre>
+</div>
 <div id="august-24-2015" class="section level2">
 <h2>August 24, 2015</h2>
-<p>Download data to laptop. I am in the directory /data of the project folder, and downloading these files the the “large_files” subfolder. Files in that folder will not be synced to github, potentially causing it to crash. You will have to download these files in order to run code on your laptop. I’m not running it through hulk because of lack of visualization.</p>
+<p>Download pine data to laptop. I am in the directory /data of the project folder, and downloading these files the the “large_files” subfolder. Files in that folder will not be synced to github, potentially causing it to crash. You will have to download these files in order to run code on your laptop. I’m not running it through hulk because of lack of visualization.</p>
 <pre><code>Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/flip.cor large_files
 
 Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS large_files
 
 Katies-MacBook-Air:data katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pine/bwa_pseudo/round2_bams/super_outliers_per_variable_pine_both_methods_* large_files</code></pre>
+<p>So, the GWAS phenotype labels are different from the PE phenotype labels. I think I figured them all out, except 1) for the GWAS there is root_wt_<em>shoot</em>wt_p root_wt_<em>shoot</em>wt_p_1</p>
+<ol start="2" style="list-style-type: decimal">
+<li>and for the PE there is RootShoot_Ratio (matching the two above) TotalWeight (not matching any GWAS)</li>
+</ol>
+<p>From Sam: * One is a ratio (root wt / shoot wt) and the other is a sum (root wt + shoot wt). The two root-shoot things clearly should have been called something more meaningful. The order has been maintained for Haktan, so the first root_wt_<em>shoot</em>wt_p is the ratio and the second one (<em>p1) is the sum. As for total weight I think that was Laura’s way of getting rid of the root</em>shoot problem, and it probably means root wt + shoot wt. Clear as mud?</p>
+<p>A similar problem exists for the GEs - in addition to the problem that some GEs were log-trasformed for the PE but not log-transformed for the GEAs. Specifically log(MAP) and log(MSP). Some of the PEs for MAP were comparably large, which makes me worry a bit because the GEAs were not very significant for this variable. Should we have log transformed it?</p>
+<p>I made files * EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv * EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv that will have to be used to match names (ug.)</p>
 </div>
 <div id="august-24-2015-1" class="section level2">
 <h2>August 24, 2015</h2>
