@@ -79,7 +79,7 @@ rm(flip_pine_gwas, flip_pine_raw)
 
 #### read in results_pine if it doesn't exist
   if (!("results_pine" %in% ls())){
-  results_pine <- read.table("../data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
+  results_pine <- read.table("../data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV", header=TRUE, comment.char=" ")
     }
   dim(results_pine)
   ### merge flip with results
@@ -91,6 +91,8 @@ rm(flip_pine_gwas, flip_pine_raw)
 
   results_pine_head <- names(results_pine)
   results_pine_head
+
+  WRITE TO FILE!
 
 #### Load SPRUCE Flip and RESULTS files
 flip_spruce_gwas <- read.table("../data/large_files/flip_spruce_v2.cor", header=TRUE)
@@ -111,7 +113,7 @@ names(flip_spruce2)[1] <- "gcontig__gcontig_pos"
   head(flip_spruce2)
 
 if (!("results_spruce" %in% ls())){
-results_spruce <- read.table("../data/large_files/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS", header=TRUE, comment.char=" ")
+results_spruce <- read.table("../data/large_files/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV", header=TRUE, comment.char=" ")
   }
   dim(results_spruce)
   results_spruce$gcontig__gcontig_pos <- paste(results_spruce$gcontig, results_spruce$pos_gcontig, sep="__")
@@ -125,6 +127,7 @@ results_spruce <- read.table("../data/large_files/var_out_GATK3_spruce_ALL.summa
   results_spruce_head
 ```
 
+The following chunk of code is not evaluated:
 ```{r, eval=FALSE, echo=FALSE}
 ### Upload superoutliers file pine (NOT USED YET)
   pine_raw_tcontig <- read.table("data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt", header=TRUE)
@@ -244,46 +247,64 @@ for (i in 1:nrow(PE)){
   print(c(i, GEA_envi_name, GWAS_pheno_name))
 
 ###################
-### Get GWAS relevant columns from large file (pine) 
-###################
-GWAS_effect_col_pine_gcta <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
-  if (length(GWAS_effect_col_pine_gcta)!=1){print("ERROR: GWAS_effect_col_pine_corrected does not equal 1")}
-  GWAS_effect_pine_gcta <- results_pine[,GWAS_effect_col_pine_gcta]
+### GWAS effects 
+#####################
+  ###################
+  ### Get GCTA GWAS relevant columns from large file (pine) 
+  ###################
+    GWAS_effect_col_pine_gcta <- which(results_pine_head==gsub("_p","_snp_effect", GWAS_pheno_name))
+    if (length(GWAS_effect_col_pine_gcta)!=1){print("ERROR: GWAS_effect_col_pine_corrected does not equal 1")}
+    GWAS_effect_pine_gcta <- results_pine[,GWAS_effect_col_pine_gcta]
+  ###################
+  ### Get RAW GWAS relevant columns from large file (pine) 
+  ###################
+    GWAS_pheno_name_raw <- GWAS_pheno_name  
+  # next lines fix a problem specific to pine df
+    if(GWAS_pheno_name=="root_wt__shoot_wt_p"){
+      GWAS_pheno_name_raw <- "root_wt_shoot_wt_p"}
+    if(GWAS_pheno_name=="root_wt__shoot_wt_p_1"){
+      GWAS_pheno_name_raw <- "root_wt_shoot_wt_p_1"} 
+    GWAS_effect_col_pine_raw <- which(results_pine_head==paste(
+      GWAS_pheno_name_raw, "_raw_rho", sep=""))
+    if (length(GWAS_effect_col_pine_raw)!=1){
+      print("ERROR: GWAS_effect_col_pine_raw does not equal 1")}
+    GWAS_effect_pine_raw <- results_pine[,GWAS_effect_col_pine_raw]
+  ###################
+  ### Get Bayenv GWAS relevant columns from large file (pine) 
+  ###################
+  GWAS_effect_cols_pine_bayenv <- grep(gsub("_p","_rho",paste("^",GWAS_pheno_name_raw, sep="")), results_pine_head)
+    if (length(GWAS_effect_cols_pine_bayenv)!=2){print("ERROR: GWAS_effect_cols_pine_corrected does not equal 2")}
+    GWAS_rho_pine_bayenv <- rowMeans(results_pine[,GWAS_effect_cols_pine_bayenv], na.rm=TRUE)
 
 ###################
-### Get Bayenv relevant columns from large file (pine) 
-###################
- GEA_effect_cols_pine_bayenv <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
-  if (length(GEA_effect_cols_pine_bayenv)!=2){print("ERROR: GEA_effect_cols_pine_corrected does not equal 2")}
-  GEA_rho_pine_bayenv <- rowMeans(results_pine[,GEA_effect_cols_pine_bayenv], na.rm=TRUE)
-
-###################
-### Get LFMM relevant columns from large file (pine)
-###################
-GEA_effect_col_pine_lfmm <- grep(paste("^",GEA_envi_name,"_z_lfmm_beagle", sep=""), results_pine_head)
-  if (length(GEA_effect_col_pine_lfmm)!=1){print("ERROR: GEA_effect_col_pine_lfmm does not equal 1")}
-  GEA_z_pine_lfmm <- results_pine[,GEA_effect_col_pine_lfmm]
-
-###################
-### Get RAW gwas relevant columns from large file (pine) 
-###################
-GWAS_pheno_name_raw <- GWAS_pheno_name  
-# next lines fix a problem specific to pine df
-  if(GWAS_pheno_name=="root_wt__shoot_wt_p"){
-    GWAS_pheno_name_raw <- "root_wt_shoot_wt_p"}
-  if(GWAS_pheno_name=="root_wt__shoot_wt_p_1"){
-    GWAS_pheno_name_raw <- "root_wt_shoot_wt_p_1"} 
-  GWAS_effect_col_pine_raw <- which(results_pine_head==paste(
-    GWAS_pheno_name_raw, "_raw_rho", sep=""))
-  if (length(GWAS_effect_col_pine_raw)!=1){
-    print("ERROR: GWAS_effect_col_pine_raw does not equal 1")}
-  GWAS_effect_pine_raw <- results_pine[,GWAS_effect_col_pine_raw]
-
-  GEA_effect_cols_pine_raw <- which(results_pine_head==paste(
-    GEA_envi_name,"_raw_rho", sep=""))
-  if (length(GEA_effect_cols_pine_raw)!=1){
-    print("ERROR: GEA_effect_cols_pine_raw does not equal 1")}
-  GEA_rho_pine_raw <- results_pine[,GEA_effect_cols_pine_raw]
+### GEA effects 
+#####################
+  ###################
+  ### Get GEA raw (pine)
+  #####################
+    GEA_effect_cols_pine_raw <- which(results_pine_head==paste(
+      GEA_envi_name,"_raw_rho", sep=""))
+    if (length(GEA_effect_cols_pine_raw)!=1){
+      print("ERROR: GEA_effect_cols_pine_raw does not equal 1")}
+    GEA_rho_pine_raw <- results_pine[,GEA_effect_cols_pine_raw]
+  ###################
+  ### Get GEA Bayenv relevant columns from large file (pine) 
+  ###################
+   GEA_effect_cols_pine_bayenv <- grep(paste("^",GEA_envi_name,"_rho", sep=""), results_pine_head)
+    if (length(GEA_effect_cols_pine_bayenv)!=2){print("ERROR: GEA_effect_cols_pine_corrected does not equal 2")}
+    GEA_rho_pine_bayenv <- rowMeans(results_pine[,GEA_effect_cols_pine_bayenv], na.rm=TRUE)
+  ###################
+  ### Get GEA LFMM relevant columns from large file (pine)
+  ###################
+  GEA_effect_col_pine_lfmm <- grep(paste("^",GEA_envi_name,"_z_lfmm_beagle", sep=""), results_pine_head)
+    if (length(GEA_effect_col_pine_lfmm)!=1){print("ERROR: GEA_effect_col_pine_lfmm does not equal 1")}
+    GEA_z_pine_lfmm <- results_pine[,GEA_effect_col_pine_lfmm]
+  ###################
+  ### Get GEA GCTA relevant columns from large file (pine)
+  ###################
+  GEA_effect_col_pine_gcta <- grep(paste("^",GEA_envi_name,"_snp_effect_GCTA", sep=""), results_pine_head)
+    if (length(GEA_effect_col_pine_gcta)!=1){print("ERROR: GEA_effect_col_pine_gcta does not equal 1")}
+    GEA_effect_pine_gcta <- results_pine[,GEA_effect_col_pine_gcta]
 
 ###################
 ### Plot PINE GEA raw vs corrected
