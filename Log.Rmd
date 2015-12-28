@@ -6,6 +6,23 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+## Dec 27, 2015
+Sam and Haktan decided to run the phenotypes with bayenv and the environments with gcta (originally we just did the converse) because of the strong evidence that they were correcting for population structure in different ways.  
+
+I downloaded the new files:
+
+`var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV`
+
+`var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV`
+
+And ran `src/incorporateFlip.R` to merge the data frames with the flip variables and re-wrote them to:
+
+`var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped`
+
+`var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped`
+
+I've spent the last week or so re-working the code to make `figures_new` plots of all correlations among variables.
+
 ## Sept 30, 2015
 ### More on the allele coding problem
 It became evident that alleles for GWAS were not coded the way Hatkan thought.  After a series of emails I think we figure it out.
