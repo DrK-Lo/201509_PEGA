@@ -405,11 +405,11 @@ for (i in 1:nrow(PE)){
 ###############
 if(sum(!is.na(GWAS_rho_pine_bayenv))>0 | sum(!is.na(GWAS_rho_spruce_bayenv))>0){
   PE$pine_score1_bayenv[i] <- sum(GWAS_rho_pine_bayenv*GEA_rho_pine_bayenv)/length(GWAS_rho_pine_bayenv) 
-  PE$pine_score2_bayenv[i] <- round(sum(sign(GWAS_rho_pine_bayenv)*sign(GEA_rho_pine_bayenv)/length(GWAS_rho_pine_bayenv)) ,4) 
+  PE$pine_score2_bayenv[i] <- round(sum((sign(GWAS_rho_pine_bayenv)*sign(GEA_rho_pine_bayenv))==1)/sum(!is.na(GWAS_rho_pine_bayenv*GEA_rho_pine_bayenv)) ,4) 
   PE$pine_slope_bayenv[i] <- lm(GEA_rho_pine_bayenv~GWAS_rho_pine_bayenv)$coef[2]
   
   PE$spruce_score1_bayenv[i] <- sum(GWAS_rho_spruce_bayenv*GEA_rho_spruce_bayenv)/length(GWAS_rho_spruce_bayenv)
-  PE$spruce_score2_bayenv[i] <- round(sum(sign(GWAS_rho_spruce_bayenv)*sign(GEA_rho_spruce_bayenv)/length(GWAS_rho_spruce_bayenv)) ,4) 
+  PE$spruce_score2_bayenv[i] <- round(sum((sign(GWAS_rho_spruce_bayenv)*sign(GEA_rho_spruce_bayenv))==1)/sum(!is.na(GWAS_rho_spruce_bayenv*GEA_rho_spruce_bayenv)) ,4) 
   PE$spruce_slope_bayenv[i] <- lm(GEA_rho_spruce_bayenv~GWAS_rho_spruce_bayenv)$coef[2]
   }#end if
 } #end loop
@@ -419,107 +419,72 @@ if(sum(!is.na(GWAS_rho_pine_bayenv))>0 | sum(!is.na(GWAS_rho_spruce_bayenv))>0){
 Now that all the scores have been calculated, we can look at the relationship between the PE association and the underlying genome-wide pattern.  I expect that higher/larger PEs will have higher scores.  The code plots and summarizes the results of a linear model 
 
 ```{r, label="PE score analysis"}
+par(mfcol=c(3,2), mar=c(3,3,0,0), oma=c(0,0,0,0))
+plot(abs(PE$pine_correlation), PE$pine_score1_bayenv)
+abline(0,0)
+plot(abs(PE$pine_correlation), PE$pine_score2_bayenv)
+abline(0,0)
+plot(abs(PE$pine_correlation), PE$pine_slope_bayenv)
+abline(0,0)
+plot(abs(PE$spruce_correlation), PE$spruce_score1_bayenv)
+plot(abs(PE$spruce_correlation), PE$spruce_score2_bayenv)
+abline(0,0)
+plot(abs(PE$spruce_correlation), PE$spruce_slope_bayenv)
+abline(0,0)
+
+
+
 head(PE)
   ylim=c(-70,70)
 
-plotter_score <- function(x,y, xlab,ylab, ymin, ymax){
+plotter_score <- function(x,y, xlab,ylab, ymin, ymax, data){
   plot(x, y,  ylim=c(ymin,ymax), 
-       col=as.numeric(PE$Phenotype), pch=as.numeric(PE$Phenotype),
-       xlab=xlab, ylab=ylab)
-  m1 <- lm(y~x + PE$Environment + PE$Phenotype)
-  print(summary(m1))
+       col=as.numeric(data$Environment), pch=as.numeric(data$Environment),  yaxt="n", xlim=c(0, max(x)),
+       xlab=xlab, ylab=ylab, las=1, cex.axis=0.6)
+  #m1 <- lm(y~x + data$Environment + data$Phenotype)
+  #print(summary(m1))
   abline(lm(y~x))
   abline(0,0, col="grey", lwd=2)
   abline(0.5,0, col="grey", lwd=2)
 }
 
-plotter_score_envi <- function(x,y, xlab,ylab, ymin, ymax){
-  plot(x, y,  ylim=c(ymin,ymax), 
-       col=as.numeric(PE$Environment), pch=as.numeric(PE$Environment),
-       xlab=xlab, ylab=ylab)
-}
-
 png(paste("../analysis/Score1_Pine_Spruce_Envi.png"), width=10, height=10, units="in", res=300)
- par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,2,0))
+ par(mfrow=c(2,1), mar=c(4,4,1,1), oma=c(0,0,2,0))
   ### All results
-  plotter_score(abs(PE$pine_correlation), PE$pine_score1_ALL_corrected_bayenv, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (corrected) Score 1 ALL SNPs", -40,40)
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score1_ALL_corrected_bayenv, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (corrected) Score 1 ALL SNPs", -40,40)
-  
-  plotter_score(abs(PE$pine_correlation), PE$pine_score1_ALL_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (raw) Score 1 ALL SNPs", -30,30)
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score1_ALL_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (raw) Score 1 ALL SNPs", -550, 550)
+  plotter_score(abs(PE$pine_correlation), PE$pine_score1_bayenv, 
+                "PINE Abs(Pheno-Envi) Correlation", 
+                "PINE Score 1 ALL SNPs", -0.0003,0.0003)
+  plotter_score(abs(PE$spruce_correlation), PE$spruce_score1_bayenv, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", 
+                "SPRUCE Score 1 ALL SNPs", -0.00035,0.00035)
 dev.off()
 
-png(paste("../analysis/Score2_Pine_Spruce_Envi.png"), width=10, height=10, units="in", res=300)
- par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,2,0))
-  plotter_score(abs(PE$pine_correlation), PE$pine_score2_ALL_corrected_bayenv, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (corrected) Proportion All SNPs", .4,.6)
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score2_ALL_corrected_bayenv, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (corrected) Proportion All SNPs", .4,.6)
-  plotter_score(abs(PE$pine_correlation), PE$pine_score2_ALL_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (raw) Proportion All SNPs", 0.1, 1)
-  plotter_score(abs(PE$spruce_correlation), PE$spruce_score2_ALL_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (raw) Proportion All SNPs", 0.1, 1)
+
+png(paste("../analysis/Score1_Pine_Spruce_Envi_byPheno.png"), width=11, height=3, units="in", res=300)
+phen <- levels(PE$Phenotype)
+par(mfcol=c(2, 15), mar=c(2,0.5,1,0.5), oma=c(2,2,0,0))
+for (j in seq_along(phen)){
+  sub <- PE[PE$Phenotype==phen[j],]
+  if(sum(!is.na(sub$pine_score1_bayenv))>0){
+  plotter_score(abs(sub$pine_correlation), sub$pine_score1_bayenv, 
+                "", "", -0.00035,0.00035, sub)
+  text(0,0.00035, phen[j], cex=0.4,adj=0)
+  plotter_score(abs(sub$spruce_correlation), sub$spruce_score1_bayenv, 
+                "SPRUCE Abs(Pheno-Envi) Correlation", 
+                "SPRUCE Score 1 ALL SNPs", -0.00035,0.00035, sub)
+  text(0,0.00035, phen[j], cex=0.4,adj=0)
+  }
+}
+mtext("Phenotype-Environment Correlation", side=1, outer=TRUE)
+mtext("(Spruce) GEA/GWAS Score (Pine)", side=2, outer=TRUE)
 dev.off()
 
-#### Highlight points by environment
-png(paste("../analysis/Score1_Pine_Spruce_Envi_colorByEnvi.png"), width=10, height=10, units="in", res=300)
- par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,2,0))
-  ### All results
-  plotter_score_envi(abs(PE$pine_correlation), PE$pine_score1_ALL_corrected_bayenv, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (corrected) Score 1 ALL SNPs", -40,40)
-  plotter_score_envi(abs(PE$spruce_correlation), PE$spruce_score1_ALL_corrected_bayenv, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (corrected) Score 1 ALL SNPs", -40,40)
-  
-  plotter_score_envi(abs(PE$pine_correlation), PE$pine_score1_ALL_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (raw) Score 1 ALL SNPs", -30,30)
-  plotter_score_envi(abs(PE$spruce_correlation), PE$spruce_score1_ALL_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (raw) Score 1 ALL SNPs", -550, 550)
+png(paste("../analysis/Score1_Pine_Spruce_Envi_byPheno_legend.png"), width=3, height=6, units="in", res=300)
+  envi<- levels(PE$Environment)
+  par(mfrow=c(1,1))
+  plot(rep(1, length(envi)), 1:length(envi), col=1:length(envi), pch=1:length(envi))
+  text(rep(1.03, length(envi)),1:length(envi) ,labels= envi, adj=0)
 dev.off()
-
-png(paste("../analysis/Score2_Pine_Spruce_Envi_colorByEnvi.png"), width=10, height=10, units="in", res=300)
- par(mfrow=c(2,2), mar=c(4,4,4,1), oma=c(0,0,2,0))
-  plotter_score_envi(abs(PE$pine_correlation), PE$pine_score2_ALL_corrected_bayenv, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (corrected) Proportion All SNPs", .4,.6)
-  plotter_score_envi(abs(PE$spruce_correlation), PE$spruce_score2_ALL_corrected_bayenv, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (corrected) Proportion All SNPs", .4,.6)
-  plotter_score_envi(abs(PE$pine_correlation), PE$pine_score2_ALL_raw, 
-                "PINE Abs(Pheno-Envi) Correlation", "PINE (raw) Proportion All SNPs", 0.1, 1)
-  plotter_score_envi(abs(PE$spruce_correlation), PE$spruce_score2_ALL_raw, 
-                "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE (raw) Proportion All SNPs", 0.1, 1)
-dev.off()
-
-quartz()
-plot(0,0)
-phens <- levels(PE$Phenotype)
-legend(-1,1, col=1:length(phens), pch=1:length(phens),
-       legend=phens)
-
-
-#   ### tcontig results
-#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t, 
-#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t")
-#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t, 
-#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t")
-#   ### tcontig results RAW
-#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_t_raw, 
-#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_t_raw")
-#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_t_raw, 
-#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_t_raw")
-# 
-#   ### gcontig results
-#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g, 
-#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g")
-#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g, 
-#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g")
-#   ### gcontig results RAW
-#   plotter_score(abs(PE$pine_correlation), PE$pine_score_super_g_raw, 
-#                 "PINE Abs(Pheno-Envi) Correlation", "PINE Score super_g_raw")
-#   plotter_score(abs(PE$spruce_correlation), PE$spruce_score_super_g_raw, 
-#                 "SPRUCE Abs(Pheno-Envi) Correlation", "SPRUCE Score super_g_raw")
 ```
 
 ```
