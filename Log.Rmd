@@ -6,6 +6,10 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+## Feb 23, 2016
+Lots of major updates, have been working on this on and off the last couple months.
+Analyses have been focusing on the Bayenv Gen-Phen and Gen-Envi, because effect sizes (rho) are standardized and this makes it easier to interpret.  Calculate a "Genome Score" for each Envi-Pheno combo, based on sum of GE*GP association.  To understand plieotropy, I also calculate the same score for subset of outlier SNPs (top 0.1%) in one Envi-Pheno combo in each Envi-Pheno combos, to reveal if they also have positive, or potentially negative, effects on that phenotype in that environment.
+
 ## Dec 27, 2015
 Sam and Haktan decided to run the phenotypes with bayenv and the environments with gcta (originally we just did the converse) because of the strong evidence that they were correcting for population structure in different ways.  
 
