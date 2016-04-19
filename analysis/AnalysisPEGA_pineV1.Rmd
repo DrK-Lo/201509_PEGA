@@ -75,47 +75,34 @@ PE_matchGEA <- read.csv("../data/EnvironmentPhenotypeCorrelations-PineSpruce-spe
   ### merge flip with results
   results_pine_head <- names(results_pine)
   results_pine_head
-
-#### Load SPRUCE Flip and RESULTS files
-
-if (!("results_spruce" %in% ls())){
-load("../data/large_files/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
-  }
-  dim(results_spruce)
- 
-  results_spruce_head <- names(results_spruce)
-  head(results_spruce_head)
-
 ```
+
 
 The following chunk of code is not evaluated.  If the `results_pine` and `results_spruce` were loaded from Rdata, then they already include super outlier columns.
 ```{r, eval=FALSE, echo=FALSE}
 if ("pine_super_raw" in names(results_pine)){print("Check if you want to run this code"); break}
 ### Upload superoutliers 
  in_super_pine <- read.table ("../data/large_files/super_outliers_per_variable_pine_both_methods_100x.txt",T)
-in_super_spruce <- read.table ("../data/large_files/super_outliers_per_variable_spruce_both_methods_100x.txt",T)
+
 in_super_pine_raw <- read.table ("../data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt",T)
-in_super_spruce_raw <- read.table ("../data/large_files/super_outliers_per_variable_spruce_both_methods_100x_raw.txt",T)
-good_super_spruce <- in_super_spruce [(in_super_spruce$outlier_count > in_super_spruce$p4),]
+
+
 good_super_pine <- in_super_pine [(in_super_pine$outlier_count > in_super_pine$p4),]
-good_super_spruce_raw <- in_super_spruce_raw [(in_super_spruce_raw$outlier_count > in_super_spruce_raw$p4),]
+
 good_super_pine_raw <- in_super_pine_raw [(in_super_pine_raw$outlier_count > in_super_pine_raw$p4),]
 
 head(good_super_pine_raw)
-head(good_super_spruce_raw)
+
 
 results_pine$pine_super_raw<-(results_pine$tcontig %in% as.character(good_super_pine_raw$pine))
-results_spruce$spruce_super_raw<-(results_spruce$tcontig %in% as.character(good_super_spruce_raw$spruce))
+
 
 results_pine$pine_super<-(results_pine$tcontig %in% as.character(good_super_pine$pine))
-results_spruce$spruce_super<-(results_spruce$tcontig %in% as.character(good_super_spruce$spruce))
 
 sum(results_pine$pine_super_raw)
 sum(results_pine$pine_super)
-sum(results_spruce$spruce_super_raw)
-sum(results_spruce$spruce_super)
+
 save(results_pine, file= "../data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
-save(results_spruce, file="../data/large_files/var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
 ```
 
 
@@ -202,21 +189,22 @@ plotter <- function(x, y, main, xlim=NULL, ylim=NULL, xlab, ylab){
   }
 ```  
 
-Next, loop through each phenotype-environment combo.  For each combo, flip GWAS to match the GEA and polarize the GEA scores so they are in matching direction to PE. (The 'flip' is going to be different for each SNP depending on how it was coded, while the 'polarization' multiplies all SNPs by -1 or by 1 depending on the slope between the phenotype and the environment.)
+Next, flip all SNPs so they are in alphabetical order and save Rdata!
 
-Then, standardize the GWAS so that each phenotype has a variance of 1 and all slopes will be on the same scale.  Plot the architecture and calculate a score:  
+```{r}
+TO DO
+```
 
-* score1 is `sum(GWAS_rho_bayenv * GEA_rho_bayenv)/n_snps`.  The null hypothesis for score1 is 0 (equal product of snp effects in all quadrants).  Positive scores indicate architectures that have more and/or larger effect SNPs for that phenotype in that environment.
 
-* score2 is the proportion of points in the 1st and 3rd quadrants. Score2 varies between 0 and 1, with the null hypothesis of 0.5 (equal number of SNPs in all quadrants.)  Score2 > 0.5 indicates that the architecture is polarized in the same direction as the environment, while score2 < 0.5 indicates that the architecture is in the opposite direction as expected given the relationship between the phenotype and the environment.
+
+loop through each phenotype-environment combo.  For each combo, flip GWAS to match the GEA and polarize the GEA scores so they are in matching direction to PE. (The 'flip' is going to be different for each SNP depending on how it was coded, while the 'polarization' multiplies all SNPs by -1 or by 1 depending on the slope between the phenotype and the environment.)
 
 
 ```{r, label="Loop through PE file"}
 PE$pine_score1_bayenv <- PE$pine_score2_bayenv <- PE$pine_slope_bayenv <- NA
-PE$spruce_score1_bayenv <- PE$spruce_score2_bayenv <- PE$spruce_slope_bayenv <- NA
 
 results_pine2 <- results_pine
-results_spruce2 <- results_spruce
+
 make_figure1 <- FALSE
 make_figure2 <- FALSE
 make_figureHighlight <- FALSE
