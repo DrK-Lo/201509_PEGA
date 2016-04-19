@@ -69,6 +69,101 @@ img {
 
 
 <p>This log is in Blog-style format (newest at top)</p>
+<div id="april-6-2016" class="section level2">
+<h2>April 6, 2016</h2>
+<p>A couple weeks ago I presented results at an Adaptree meeting and people were interested, but it will take some convincing to show the approach is statistically valid. I shared the “flipped” files on Dropbox with Ian and Kay, and realized that I have to document the flipping so we can determine the direction of allele effects.</p>
+<p>First, the team sent me ‘flip’ files (for raw and GWAS, Bayenv was already coded this way) that the earliest alphabetical allele would be a 1 and the other allele would be 0. I incorporated these into the dataframe with Sam’s super outliers. To get alleles coded in the same direction, first load the file and then multiply the relevant statistic column by the relevant “flip” column. <code>flip_pine_gwas</code> is for Hatkan’s gcta results, and <code>flip_pine_raw</code> is for Sam’s raw correlations.</p>
+<p>Example for pine:</p>
+<pre><code>### load dataframe
+results_pine &lt;- load(&quot;var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata&quot;)
+
+### Example for eFFP
+GWAS_effect &lt;- results_pine$eFFP_snp_effect_GCTA*results_pine$flip_pine_gwas
+  # this flip column applies to any GCTA results, including environment
+Bayenv_effect_rho &lt;- mean(results_pine$eFFP_rho1, results_pine$eFFP_rho2) 
+  # no need to flip, but Bayenv outputs two rhos for some reason so I average them
+
+Raw_effect_rho &lt;- results_pine$eFFP_raw_rho*results_pine$flip_pine_raw
+  # this flip column applies to any Bayenv results, including phenotype</code></pre>
+<p>After flipping, if the SNP is an “A/T” and the association is positive, A would increase the phenotype/environment and T would decrease it. If the association is negative, A would decrease the phenotype/environment and T would increase it. If the SNP is a “C/G,” the same logic applies.</p>
+</div>
+<div id="feb-23-2016" class="section level2">
+<h2>Feb 23, 2016</h2>
+<p>Lots of major updates, have been working on this on and off the last couple months. Analyses have been focusing on the Bayenv Gen-Phen and Gen-Envi, because effect sizes (rho) are standardized and this makes it easier to interpret. Calculate a “Genome Score” for each Envi-Pheno combo, based on sum of GE*GP association. To understand plieotropy, I also calculate the same score for subset of outlier SNPs (top 0.1%) in one Envi-Pheno combo in each Envi-Pheno combos, to reveal if they also have positive, or potentially negative, effects on that phenotype in that environment.</p>
+</div>
+<div id="dec-27-2015" class="section level2">
+<h2>Dec 27, 2015</h2>
+<p>Sam and Haktan decided to run the phenotypes with bayenv and the environments with gcta (originally we just did the converse) because of the strong evidence that they were correcting for population structure in different ways.</p>
+<p>I downloaded the new files:</p>
+<p><code>var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV</code></p>
+<p><code>var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV</code></p>
+<p>And ran <code>src/incorporateFlip.R</code> to merge the data frames with the flip variables and re-wrote them to:</p>
+<p><code>var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped</code></p>
+<p><code>var_out_GATK3_spruce_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped</code></p>
+<p>I’ve spent the last week or so re-working the code to make <code>figures_new</code> plots of all correlations among variables.</p>
+</div>
+<div id="sept-30-2015" class="section level2">
+<h2>Sept 30, 2015</h2>
+<div id="more-on-the-allele-coding-problem" class="section level3">
+<h3>More on the allele coding problem</h3>
+<p>It became evident that alleles for GWAS were not coded the way Hatkan thought. After a series of emails I think we figure it out. From Hatkan:</p>
+<pre><code>Spruce
+(i) rogue:/data/seqcap/adaptree2_seqcap/spruce/final_tables_filt/var_out_598ind_allhet_ALL.table.contig_filt10_filtGATK2_p95_h0.7.haktan
+(ii) rogue:/data/hsuren/GWAS/rawdata_hapmap.plk.ped
+(iii) rogue:/data/hsuren/GWAS/data.bed (Input file for GCTA)
+
+Pine
+(i) hulk:/data/seqcap/pine/bwa_pseudo/round2_bams/final_tables_filt/var_out_pine688_allhet_ALL.table.contig.filt10.passFILT2_p95_h0.7.finalPops279.haktan
+(ii) hulk:/data/hsuren/GWAS/data.plk.ped
+(iii) hulk:/data/hsuren/GWAS/data.bed (Input file for GCTA)
+
+To convert from HapMap (i) to Plink (ii) (used TASSEL program w/ following code)
+./run_pipeline.pl -fork1 -h /data/hsuren/GWAS/rawdata_hapmap -export -exportType Plink -runfork1
+
+To convert from Plink (ii) to binary plink (bed) (iii) (used plink program w/ following code)
+./plink --file ../TASSEL/data.plk --out data --make-bed
+
+Just to confirm again, GCTA converted the data.bed file before GWAS analysis (11 for the homozygote of the first allele (the first allele in the *.bim file) and 00 for the homozygote of the second allele). The code (GCTA) is on github https://github.com/cooljeanius/gcta</code></pre>
+<ul>
+<li>the *.bim file was used to code alleles for gcta (Hatkan)</li>
+<li>So if the first column in the *bim file is a “G” and the second column is an “A” it coded a GG as a 11 and a AA as a 00.</li>
+<li>So if the first letter is also first alphabetically, the coding is correct. else, the coding is incorrect</li>
+</ul>
+<div id="i-downloaded-the-.bim-files-and-converted-them-myself-pine-fromhulkdatahsurengwasdata.bim-to-datalarge_filespine_gwas.bim-corresponding-flip-file-is-flip_pine_v2.cor" class="section level5">
+<h5>I downloaded the *.bim files and converted them myself: Pine: from<code>hulk:/data/hsuren/GWAS/data.bim</code> to <code>data/large_files/pine_gwas.bim</code>, corresponding flip file is <code>flip_pine_v2.cor</code></h5>
+<p>Spruce: from<code>rogue:/data/hsuren/GWAS/data.bim</code> to <code>data/large_files/spruce_gwas.bim</code>, corresponding flip file is <code>flip_spruce_v2.cor</code></p>
+</div>
+</div>
+<div id="checksums-on-uploaded-data-files" class="section level3">
+<h3>Checksums on uploaded data files</h3>
+<p>The pine results are weird, several thousand SNPs have the same value in the data.</p>
+<pre><code># On my mac
+Katies-MacBook-Air:large_files katie$ shasum var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS
+9551324646546c4814760703f09dd26b56f08555  
+
+# On hulk
+shasum /data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS
+9551324646546c4814760703f09dd26b56f08555
+
+The two are identical.  Checking if problem comes from merger.</code></pre>
+</div>
+</div>
+<div id="sept-26-2015" class="section level2">
+<h2>Sept 26, 2015</h2>
+<div id="more-on-the-allele-coding-problem-1" class="section level3">
+<h3>More on the allele coding problem</h3>
+<p>GWAS (Hatkan) 1 for major allele, 0 for minor allele. “Major allele” means the allele in higher frequency for given SNP.</p>
+<p>Bayenv/LFMM (Kay) 1 for earliest letter in alphabet, 0 for other allele</p>
+<p>flip (Kay) 1 if major allele was first letter and -1 if major allele came second in alphabetical order. Kay’s files are the “flip.cor” files downloaded below.</p>
+<p>raw correlations (Sam) “I read through the genotypes for a given SNP, and the first homozygote encountered was given a value of”0“, while the second homozygote encountered was given a value of”2“, (hets =”1“). This means that it wasn’t alphabetical or reference/alternate or minor/major or anything else that made sense but purely random based on the first genotype encountered.”</p>
+<p>For example:</p>
+<p>situation gwas bayenv flip A/T A-major 1/0 1/0 1 A/T T-major 0/1 1/0 -1 C/G C-major 1/0 1/0 1 C/G G-major 0/1 1/0 -1</p>
+<p>Sam’s flip files are in (downloaded today): <code>/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.table_filt10_p95_het7_passFILT2.2_LDformat_TOFLIP_alphabet_lowest_eq_1</code></p>
+<p><code>/data/seqcap/adaptree2_seqcap/spruce/var_out_GATK3_spruce_ALL.table_filt10_p95_het7_passFILT2.3_LDformat_TOFLIP_alphabet_lowest_eq_1</code></p>
+<p>(Sam: Whenever there is a “1”, it means that the coding of the SNP is currently in the format of {lowest alphabetical == 1, higest alphabetical == 0}. Whenvever there is a “-1”, it means that the coding is opposite to this.</p>
+<p>NOTE: these SNPs are not necessarily in the same order as any tables, so a “merge” or similar command should be used to get the order right.)</p>
+</div>
+</div>
 <div id="august-30-2015" class="section level2">
 <h2>August 30, 2015</h2>
 <p>Today I was working with Sam’s raw (uncorrected for population structure) Spearman’s rho for GWAS and GEAs, but I realized that I don’t know how he coded his alleles. Was it alphabetical (like bayenv) or by minor allele (like GWAS)???? UGGGGGGGGGGG! This is driving me crazy.</p>

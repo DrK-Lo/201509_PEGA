@@ -6,6 +6,29 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+
+## April 6, 2016
+A couple weeks ago I presented results at an Adaptree meeting and people were interested, but it will take some convincing to show the approach is statistically valid.  I shared the "flipped" files on Dropbox with Ian and Kay, and realized that I have to document the flipping so we can determine the direction of allele effects.
+
+First, the team sent me 'flip' files (for raw and GWAS, Bayenv was already coded this way) that the earliest alphabetical allele would be a 1 and the other allele would be 0.  I incorporated these into the dataframe with Sam's super outliers.  To get alleles coded in the same direction, first load the file and then multiply the relevant statistic column by the relevant "flip" column.  `flip_pine_gwas` is for Hatkan's gcta results, and `flip_pine_raw` is for Sam's raw correlations.
+
+Example for pine:
+```
+### load dataframe
+results_pine <- load("var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
+
+### Example for eFFP
+GWAS_effect <- results_pine$eFFP_snp_effect_GCTA*results_pine$flip_pine_gwas
+  # this flip column applies to any GCTA results, including environment
+Bayenv_effect_rho <- mean(results_pine$eFFP_rho1, results_pine$eFFP_rho2) 
+  # no need to flip, but Bayenv outputs two rhos for some reason so I average them
+
+Raw_effect_rho <- results_pine$eFFP_raw_rho*results_pine$flip_pine_raw
+  # this flip column applies to any Bayenv results, including phenotype
+```
+After flipping,  if the SNP is an "A/T" and the association is positive, A would increase the phenotype/environment and T would decrease it. If the association is negative, A would decrease the phenotype/environment and T would increase it. If the SNP is a "C/G," the same logic applies.
+
+
 ## Feb 23, 2016
 Lots of major updates, have been working on this on and off the last couple months.
 Analyses have been focusing on the Bayenv Gen-Phen and Gen-Envi, because effect sizes (rho) are standardized and this makes it easier to interpret.  Calculate a "Genome Score" for each Envi-Pheno combo, based on sum of GE*GP association.  To understand plieotropy, I also calculate the same score for subset of outlier SNPs (top 0.1%) in one Envi-Pheno combo in each Envi-Pheno combos, to reveal if they also have positive, or potentially negative, effects on that phenotype in that environment.
