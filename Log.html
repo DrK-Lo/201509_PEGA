@@ -68,7 +68,35 @@ img {
 </div>
 
 
-<p>This log is in Blog-style format (newest at top)</p>
+<p>This log is in Blog-style format (newest at top) ## April 19, 2016 Last night I had a skype meeting with Sam and Mike and Kay to bounce some ideas around. I came out of that meeting with a plan, and some thoughts for moving forward:</p>
+<ol style="list-style-type: decimal">
+<li>Edit dataframe so all SNP effects are alphabetical</li>
+</ol>
+<ul>
+<li>Thought I did this before, but didn’t. Need to do this first.</li>
+</ul>
+<ol start="2" style="list-style-type: decimal">
+<li>Identify groups of outliers. Focus on these groups for analysis.</li>
+</ol>
+<ul>
+<li>Group 1 a priori: top 1% of SNPs from each of Sam’s super contigs</li>
+<li>Group 2 reinforcing: top outliers in Fall Cold Hardiness - Lat</li>
+<li>Group 3 reinforcing: second group of outliers in Eref/Ext/CMD, excluding group 2</li>
+<li>Group 4 antagonistic: antagonistic in MAP. They might be from group 3, we’ll see.</li>
+</ul>
+<ol start="3" style="list-style-type: decimal">
+<li><p>Output G2-4 outliers and share with Sam and Kay - are they interesting?</p></li>
+<li><p>Plot and analyze</p></li>
+</ol>
+<ul>
+<li>order phenotypes and environments according to their abs(correlations) in a 17 x 22 grid</li>
+<li>Do the following for Bayenv galaxies and Raw galaxies in each group (4 groups x 2 types = 8 graphs of 17 x 22 panels):
+<ul>
+<li>In each panel plot the galaxy plot with outliers highlighted, or with outlier bubbles (bubble size = # outliers / contig). Add an x-axis to the plot indicating the direction of effects of the allele on the phenotype. (Output plot to tiff and then plot tiff on grid). Add the PE association as text to panel.</li>
+</ul></li>
+<li><p>Calculate the mean covariance in GE-PE among unlinked SNPs by boostrapping 1 SNP from each gcontig. Add the mean covariance as text to panel. Save covariance.</p></li>
+<li><p>Calculate significance of covariance by randomly sampling 1 SNP from each gcontig and creating a null distribution against which to test observed distribution.</p></li>
+</ul>
 <div id="april-6-2016" class="section level2">
 <h2>April 6, 2016</h2>
 <p>A couple weeks ago I presented results at an Adaptree meeting and people were interested, but it will take some convincing to show the approach is statistically valid. I shared the “flipped” files on Dropbox with Ian and Kay, and realized that I have to document the flipping so we can determine the direction of allele effects.</p>

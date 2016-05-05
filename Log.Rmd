@@ -7,6 +7,47 @@ output: html_document
 
 This log is in Blog-style format (newest at top)
 
+## April 20, 2016
+
+I looked into one group of super outliers a bit more: the outliers on the FCI-Lat association in Bayenv.  A majority of them are from one contig that is on your super outlier list at p9:
+
+
+tscaffold1962_232203_233472            comp60064_c0_seq1 (9 / 76 SNPs)
+tscaffold1962_233534_237733            comp60064_c0_seq1 (21 / 76 SNPs)
+
+
+And here is what they do in different comparisons (note that I didn’t flip for the negative PE association, so it looks like a reflection of what I showed you before).  If you look at the Bayenv Lat vs. Raw Lat plot, you can really see how these SNPs behave differently after Bayenv corrects for population structure.  
+
+## April 19, 2016
+Last night I had a skype meeting with Sam and Mike and Kay to bounce some ideas around.  I came out of that meeting with a plan, and some thoughts for moving forward:
+
+1. Edit dataframe so all SNP effects are alphabetical
+
+* Thought I did this before, but didn't - I was doing the cacluations as I went.  Need to do this first.
+  
+2. Identify groups of outliers. Focus on these groups for analysis.
+
+* Group 1 a priori: top 1% of SNPs from each of Sam's super contigs
+* Group 2 reinforcing: top outliers in Fall Cold Hardiness - Lat
+* Group 3 reinforcing: second group of outliers in Fall Cold Hardiness and Eref/Ext/CMD, excluding group 2
+* Group 4 antagonistic: antagonistic in Fall Cold Hardiness and MAP.  They might be from group 3, we'll see.
+  
+3. Output G2-4 outliers and share with Sam and Kay - are they interesting?
+
+4.  Plot and analyze
+
+   + order phenotypes and environments according to their abs(correlations) in a 17 x 22 grid, show dendogram
+   + Do the following for Bayenv galaxies and Raw galaxies in each group (4 groups x 2 types = 8 graphs of 17 x 22 panels):
+    + In each panel plot the galaxy plot with outliers highlighted, or with outlier bubbles (bubble size = # outliers / contig).  Add an x-axis to the plot indicating the direction of effects of the allele on the phenotype.For negative PE associations the x-axis is “flipped” for plotting. (Output plot to tiff and then plot tiff on grid). Add the PE association as text to panel.
+    
+   + Calculate the mean covariance in GE-PE among unlinked SNPs by boostrapping 1 SNP from each gcontig.  Add the mean covariance as text to panel.  Save covariance.
+   
+   + Calculate significance of covariance by sampling a group of SNPs the same number as gcontigs in the outlier SNPs and:
+
+-sample a random gcontig
+-sample a SNP from that random gcontig that is matched in allele frequency to outlier-SNP
+-repeat above two steps creating a null distribution against which to test observed distribution.
+
 ## April 6, 2016
 A couple weeks ago I presented results at an Adaptree meeting and people were interested, but it will take some convincing to show the approach is statistically valid.  I shared the "flipped" files on Dropbox with Ian and Kay, and realized that I have to document the flipping so we can determine the direction of allele effects.
 

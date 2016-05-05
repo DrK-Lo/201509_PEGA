@@ -2,3 +2,6 @@
 .Rproj.user
 data/large_files/*
 analysis/figure*
+.Rhistory
+analysis/*.pdf
+figures*

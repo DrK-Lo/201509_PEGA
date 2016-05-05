@@ -1,207 +1,646 @@
 ---
-title: "PEGA for Pine Analysis"
+title: "PEGA for Pine Analysis: Step 2 choose outlier groups"
 author: "Katie Lotterhos"
-date: "August 24, 2015"
+date: "April 24, 2016"
 output: html_document
 ---
 
-Does the degree to which SNPs evolve to be correlated with the environment depend on the phenotype-environment association of the phenotypes they are associated with?
-
-Basic algorithm:
-
-1. choose environment
-2. choose phenotype
-3. get PE association
-4. get relevant column data for each SNP (bayenv rho, bayenv bf, gwas slope, gwas p-value) using system calls
-5. correct rho for different coding from gwas using flip.cor using merge
-6. correct rho for PE/GWAS direction (polarize)
-    + (PE-correlation sign) * (GWAS-slope sign) = correction sign
-7. (remove large values that are not significant)
-8. plot GWAS slope (x axis) vs GEA (y axis)
-    + points in 1st and 3rd quadrants (signs match expected direction)
-    + points in 2nd and 4th quadrants (signs don't match expected direction)
-    
-#### Note
-Note that the code runs fastest if you work through R in a terminal window and upload the "results_pine" object first.  Once it is uploaded, when the markdown is created it won't try to load the "results_pine" dataframe, which is very large.  To make this markdown file:
-```
-library(knitr)
-library(markdown)
-setwd("~/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysis")
-knit("AnalysisPEGA.Rmd")  # produces the md file
-markdownToHTML("AnalysisPEGA.md", "AnalysisPEGA.html")  # converts an md file to html
-```
-  
-Install packages  
-```{r, label="install packages"}
-  setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysis")
-  if (!("hexbin" %in% installed.packages())){install.packages("hexbin")}
-  library(hexbin)
-  if (!("gridExtra" %in% installed.packages())){install.packages("ash")}
-  library(gridExtra)
-  if (!("ash" %in% installed.packages())){install.packages("ash")}
-  library(ash)
-  if (!("fields" %in% installed.packages())){install.packages("fields")}
-  library(fields)
-  if (!("solaR" %in% installed.packages())){install.packages("solaR")}
-  library(solaR)
-```
-
-Load data, if not already loaded.  The phenotype and environment labels were not consistent among studies.  The `matchXXX` objects are used to match inconsistent labeling.
-
-Also load "flip" data.  A summary of the flip (i.e., allele coding) problem can be found in the `Log.Rmd`.  `XXX_flip_gwas` is an indicator (-1,1) to multiply the gwas slopes by to make them match the ways alleles were coded for bayenv GEAs (alphabetical).  `XXX_flip_raw` is an indicator (-1,1) to multiply Sam's raw correlations by to match the ways alleles were coded for the bayenv GEAs (alphabetical).
+### Load data
 
 ```{r, label="load data"}
-### load data
-PE <- read.csv("../data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2.csv", header=TRUE)
+load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
+#this loads PE, results_pine3, gcontig_array, gcontig_array_names, PE_matchGWAS,PE_matchGEA
 
-#reorder to make largest effects on top
-PE <- PE[rev(order(abs(PE$pine_correlation))),]
-head(PE)
-plot(PE$pine_correlation, PE$spruce_correlation, pch=20, col="blue")
-abline(0,1)
-abline(lm(PE$spruce_correlation~PE$pine_correlation), col="blue")
 
-PE_matchGWAS <- read.csv("../data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGWAS.csv", header=TRUE)
-PE_matchGEA <- read.csv("../data/EnvironmentPhenotypeCorrelations-PineSpruce-spearman_v2_matchGEA.csv", header=TRUE)
+  #if(!("ash" %in% installed.packages())){install.packages("ash")}
+  require(ash)
+  require(fields)
+```
 
-#### Load PINE Flip and RESULTS files
-  # Ran incorporateFlip.R to get files to right format
 
-#### read in results_pine if it doesn't exist
-  if (!("results_pine" %in% ls())){
-  load("../data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
+### Plotting function plot_2D.a 
+plot_2D.a flips the phenotype axis
+
+```{r}
+plot_2D.a <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, PE=1){
+  if(PE<0){x <- -x; x_sub <- -x_sub}
+
+  data1 <- cbind(x, y)
+  data1b <- data1[complete.cases(data1),]
+  if(length(xlim)==0){
+    xlim_up <- max(x, na.rm=TRUE)+0.15*max(x, na.rm=TRUE)
+    xlim_lower <- min(x, na.rm=TRUE)-0.15*max(x, na.rm=TRUE)
+  }else{
+    xlim_lower <- xlim[1]; xlim_up <- xlim[2]
+  }
+  if(length(ylim)==0){
+    ylim_up <- max(y, na.rm=TRUE)+0.15*max(y, na.rm=TRUE)
+    ylim_lower <- min(y, na.rm=TRUE)-0.15*max(y, na.rm=TRUE)
+  }else{
+    ylim_lower <- ylim[1]; ylim_up <- ylim[2]
+  }
+        binned <- bin2(data1b,
+                 matrix(c(xlim_lower,xlim_up,ylim_lower,ylim_up), 2,2, byrow=TRUE),
+                 nbin=c(nbin,nbin))
+    binned$nc[binned$nc==0]=NA
+    image(seq(xlim_lower,xlim_up,length.out = nbin), 
+               seq(ylim_lower,ylim_up, length.out=nbin),
+               binned$nc,
+             xlab=xlab, ylab=ylab, add=FALSE, 
+             col=grey.colors(75, 0.25,0.9),
+             xaxt="n", yaxt="n", bty="n")
+    points(x_sub, y_sub, pch=24, cex=1, col="magenta", bg="orange")
+    
+    lines(c(-100,100), c(0,0), col="grey") #add x axis
+    lines(c(0,0), c(-100,100), col="grey") # add y axis
+    if (abs(PE)>0.1){
+      abline(lm(y~x), lwd=2)
+      m <- lm(y_sub~x_sub)
+      if(summary(m)$coef[2,4] < 1e-01){abline(m, col="orange", lwd=2)}
+      }
+    text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="grey")
+    text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="grey")
+    if(PE>0){
+      text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="grey"); text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="grey")
     }
-  dim(results_pine)
-  ### merge flip with results
-  results_pine_head <- names(results_pine)
-  results_pine_head
+    if(PE<0){
+       text(xlim_up*0.95,ylim_up*0.05,"-", cex=2, col="grey"); text(xlim_lower*0.95,ylim_up*0.05,"+", cex=2, col="grey")   
+    }
+    text(xlim_up*0.75,ylim_lower*0.95, paste("PE =", PE), cex=1.2)
+} # end plot_2D.a
 ```
 
-
-The following chunk of code is not evaluated.  If the `results_pine` and `results_spruce` were loaded from Rdata, then they already include super outlier columns.
-```{r, eval=FALSE, echo=FALSE}
-if ("pine_super_raw" in names(results_pine)){print("Check if you want to run this code"); break}
-### Upload superoutliers 
- in_super_pine <- read.table ("../data/large_files/super_outliers_per_variable_pine_both_methods_100x.txt",T)
-
-in_super_pine_raw <- read.table ("../data/large_files/super_outliers_per_variable_pine_both_methods_100x_raw.txt",T)
-
-
-good_super_pine <- in_super_pine [(in_super_pine$outlier_count > in_super_pine$p4),]
-
-good_super_pine_raw <- in_super_pine_raw [(in_super_pine_raw$outlier_count > in_super_pine_raw$p4),]
-
-head(good_super_pine_raw)
-
-
-results_pine$pine_super_raw<-(results_pine$tcontig %in% as.character(good_super_pine_raw$pine))
-
-
-results_pine$pine_super<-(results_pine$tcontig %in% as.character(good_super_pine$pine))
-
-sum(results_pine$pine_super_raw)
-sum(results_pine$pine_super)
-
-save(results_pine, file= "../data/large_files/var_out_GATK3_allhet_pine688_ALL.summary.ALL.annots.sorted.GOOD.window_RESULTS_altGCTABAYENV_flipped_withSuper.Rdata")
-```
-
-
-Function used for plotting
+### Plotting function plot_2D.b
+plot_2D.b does not flip the phenotype axis.  Instead it colors the quadrant for the expected direction based on the PE association
 ```{r}
-  plot_compare<- function(x,y, xlab, ylab, xlim=NULL, ylim=NULL){
-  if (sum(x,na.rm=TRUE)==0 | sum(y,na.rm=TRUE)==0){plot(0,0);print(head(x)); print(head(y))}else{
-  data1 <- cbind(x, y)
-  data1b <- data1[complete.cases(data1),]
-  if(length(xlim)==0){xlim=max(abs(x)*1.01, na.rm=TRUE)}
-  if(length(ylim)==0){ylim=max(abs(y)*1.01, na.rm=TRUE)}  
-        binned <- bin2(data1b, 
-                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
-                 nbin=c(100,100))
-    binned$nc[binned$nc==0]=NA
-    image(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc, 
-             xlab=xlab, ylab=ylab, add=FALSE, col=tim.colors(75))
-  }#end if
-  }
+plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL, y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
+  #if(PE<0){x <- -x; x_sub <- -x_sub}
 
-#### plot compare no axes or labels
-  plot_compare_noaxes<- function(x,y, xlab, ylab, xlim=NULL, ylim=NULL){
-  par(mar=c(0,0,0,0))
-  if (sum(x,na.rm=TRUE)==0 | sum(y,na.rm=TRUE)==0){plot(0,0);print(head(x)); print(head(y))}else{
   data1 <- cbind(x, y)
   data1b <- data1[complete.cases(data1),]
-  if(length(xlim)==0){xlim=max(abs(x)*1.01, na.rm=TRUE)}
-  if(length(ylim)==0){ylim=max(abs(y)*1.01, na.rm=TRUE)}  
-        binned <- bin2(data1b, 
-                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
-                 nbin=c(100,100))
-    binned$nc[binned$nc==0]=NA
-    plot(0,0, xlim=c(-xlim,xlim), ylim=c(-ylim,ylim), type='n',bty='n', yaxt="n", xaxt="n")
-    image(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc, 
-             xlab="", ylab="", add=TRUE, col=tim.colors(75))
-  }#end if
+  if(length(xlim)==0){
+    xlim_up <- max(x, na.rm=TRUE)+0.15*max(x, na.rm=TRUE)
+    xlim_lower <- min(x, na.rm=TRUE)-0.15*max(x, na.rm=TRUE)
+  }else{
+    xlim_lower <- xlim[1]; xlim_up <- xlim[2]
   }
-
-plot_compare_noaxes_points<- function(x,y, xlab, ylab, xlim=NULL, ylim=NULL, xsub,ysub){
-  par(mar=c(0,0,0,0))
-  if (sum(x,na.rm=TRUE)==0 | sum(y,na.rm=TRUE)==0){plot(0,0);print(head(x)); print(head(y))}else{
-  data1 <- cbind(x, y)
-  data1b <- data1[complete.cases(data1),]
-  if(length(xlim)==0){xlim=max(abs(x)*1.01, na.rm=TRUE)}
-  if(length(ylim)==0){ylim=max(abs(y)*1.01, na.rm=TRUE)}  
-        binned <- bin2(data1b, 
-                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
-                 nbin=c(100,100))
-    binned$nc[binned$nc==0]=NA
-    plot(0,0, xlim=c(-xlim,xlim), ylim=c(-ylim,ylim), type='n',bty='n', yaxt="n", xaxt="n")
-    image(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc, 
-             xlab="", ylab="", add=TRUE, col=tim.colors(75))
-  points(xsub, ysub, pch=23, cex=1.3, col="orange", bg="magenta")
-  }#end if
+  if(length(ylim)==0){
+    ylim_up <- max(y, na.rm=TRUE)+0.15*max(y, na.rm=TRUE)
+    ylim_lower <- min(y, na.rm=TRUE)-0.15*max(y, na.rm=TRUE)
+  }else{
+    ylim_lower <- ylim[1]; ylim_up <- ylim[2]
   }
-
-### Plotter function
-plotter <- function(x, y, main, xlim=NULL, ylim=NULL, xlab, ylab){
-  data1 <- cbind(x, y)
-  if (sum(x,na.rm=TRUE)==0 | sum(y,na.rm=TRUE)==0){plot(0,0);print(head(x));print(head(y))}else{
-  if(length(xlim)==0){xlim=max(abs(x)*1.01, na.rm=TRUE)}
-  if(length(ylim)==0){ylim=max(abs(y)*1.01, na.rm=TRUE)} 
-  data1b <- data1[complete.cases(data1),]
-  score1 <- sum(data1b[,1]*data1b[,2]) #score 1 based on sum of products
-  score1b <- round(score1/nrow(data1b)*10000,1)
-  score2 <- round(sum((sign(data1b[,1])*sign(data1b[,2]))==1)/nrow(data1b),4) #score 2 based on number of points
-    binned <- bin2(data1b, 
-                 matrix(c(-xlim,xlim,-ylim,ylim), 2,2, byrow=TRUE), 
-                 nbin=c(100,100))
-    if(binned$nskip!=0){print("Error in binning, some values not counted. This affects score."); break}
+        binned <- bin2(data1b,
+                 matrix(c(xlim_lower,xlim_up,ylim_lower,ylim_up), 2,2, byrow=TRUE),
+                 nbin=c(nbin,nbin))
     binned$nc[binned$nc==0]=NA
+    image(seq(xlim_lower,xlim_up,length.out = nbin), 
+               seq(ylim_lower,ylim_up, length.out=nbin),
+               binned$nc,
+             xlab=xlab, ylab=ylab, add=FALSE, 
+             col=grey.colors(75, 0.25,0.9),
+             xaxt="n", yaxt="n", bty="n")
+    if(PE > 0.1){
+      polygon(c(0,1,1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.1))
+      polygon(c(0,-1,-1,0,0), c(0,0,-1,-1,0), col=rgb(0,0,0,0.1))
+      }
+    if(PE < -0.1){
+      polygon(c(0,-1,-1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.1))
+      polygon(c(0,1,1,0,0), c(0,0,-1,-1,0),col=rgb(0,0,0,0.1))
+      }
+    points(x_sub, y_sub, pch=24, cex=1, col="magenta", bg="orange")
+    
+    lines(c(-100,100), c(0,0), col="grey") #add x axis
+    lines(c(0,0), c(-100,100), col="grey") # add y axis
+    if (abs(PE)>0.1){
+      abline(lm(y~x), lwd=2)
+      if(length(x_sub)>5){
+        m <- lm(y_sub~x_sub)
+        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="orange", lwd=2)}
+        }
+      }
   
-  slope <- lm(y~x)
-  
-    image.plot(seq(-xlim,xlim,length.out = 100), seq(-ylim,ylim, length.out=100),binned$nc,
-             xlab=xlab, ylab=ylab, 
-             main=paste(main, "\n, Score1 =",score1b, 
-                        "Score2 =", score2,
-                        "Slope =",round(slope$coef[2],5)))
+    if(length(x_sub_green)>0){
+      points(x_sub_green, y_sub_green, pch=24, cex=1, col="darkgreen", bg="green")
+      if (abs(PE)>0.1 & length(x_sub_green)>5){
+        m <- lm(y_sub_green~x_sub_green)
+        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="green", lwd=2)}
+      }
+    }#end if x_sub_green
+    if(length(x_sub_blue)>0){
+      points(x_sub_blue, y_sub_blue, pch=24, cex=1, col="blue", bg="lightblue")
+      if (abs(PE)>0.1 & length(x_sub_blue)>5){
+        m <- lm(y_sub_blue~x_sub_blue)
+        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="blue", lwd=2)}
+      }
+    }#end if x_sub_blue
+      if(length(x_sub_golden)>0){
+      points(x_sub_golden, y_sub_golden, pch=24, cex=1, col="darkgoldenrod4", bg="darkgoldenrod")
+      if (abs(PE)>0.1 & length(x_sub_golden)>5){
+        m <- lm(y_sub_golden~x_sub_golden)
+        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="darkgoldenrod", lwd=2)}
+      }
+    }#end if x_sub_blue
+    
 
-  abline(slope)
-  return(c(score1b, score2, slope$coef[2]))
-  }#end else
-  }
-```  
+    text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="black")
+    text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="black")
+    
+  text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="black"); text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="black")
 
-Next, flip all SNPs so they are in alphabetical order and save Rdata!
+    text(xlim_up*0.75,ylim_lower*0.95, paste("PE =", PE), cex=1.2)
+} # end plot_2D.b
+```
+
+
+
+### Plotting function for muliple panels, ordered by dendogram of covariances among phenotypes and environments
 
 ```{r}
-TO DO
+head(PE)
+load("../../20160125 heatmap denograms envi pheno/PineHeatmap.Rdata")
+# loads env,env_clust,phen,phen_clust,EvP, EvPclust
+  # env, phen, and EvP are correlation matrices based on raw data
+  # env_clust and phen_clust are heatmap.2 objects showing how variables were ordered
+names(env_clust)
+(xorder <- rownames(env_clust$carpet)) # plotted in x axis in this order
+colnames(env_clust$carpet) # plotted in y axis in this order
+
+(yorder <- rev(rownames(phen_clust$carpet))) # plotted phenotypes in this order
+#yorder <- yorder[-4] # remove root weight
+pheno_ind <- c(1:3,5:17)
+colnames(phen_clust$carpet) # plotted in y axis in this order
+
+#### Function for plotting according to dendogram order
+MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(1:3,5:17), xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),  width=50, height=66, type="Bayenv", Green_logical=NULL, Blue_logical=NULL, Golden_logical=NULL){
+    #type = "Bayenv" or "Raw"
+  
+  pdf(file = filename,width=width,height=height)
+  par(mfrow=c(length(envi_ind),length(pheno_ind)), mar=c(2,2,0,0), oma=c(6,6,6,0))
+  for (i in envi_ind){ ## loop through environments
+    for (j in pheno_ind){ ## loop through phenotypes
+     
+      ### y = get GEA column
+      if(type=="Bayenv"){gea_col <- grep(paste("^",xorder[i],"_rhoave", sep=""),names(results_pine3))}
+      if(type=="Raw"){gea_col <- grep(paste("^",xorder[i],"_raw_rho", sep=""),names(results_pine3))}
+      
+      y <- results_pine3[,gea_col] #carrot is needed for FFP
+      
+      ### x = get GPA column
+        gpa1 <- PE_matchGWAS$Phenotype_GWAS[which(PE_matchGWAS$Abb == yorder[j])]
+        if(gpa1=="root_wt__shoot_wt_p"){
+          gpa1 <- "root_wt_shoot_wt_p"}
+        if(gpa1=="root_wt__shoot_wt_p_1"){
+          gpa1 <- "root_wt_shoot_wt_p_1"} 
+        
+        if(type=="Bayenv"){
+          gpa2<- gsub("_p","",gpa1)
+          gpa_col <- grep(paste("^",gpa2, "_rhoave_BAYENV", sep=""), names(results_pine3))
+        }
+        if(type=="Raw"){gpa_col <- grep(paste("^",gpa1,"_raw_rho", sep=""), names(results_pine3))}
+  
+      x <- results_pine3[,gpa_col]
+    # pecorr = get PE
+      pecorr <- PE$pine_correlation[(PE$Environment==PE_matchGEA$Environment_PE[PE_matchGEA$Environment_GEA == xorder[i]]) & PE$PhenAbb==yorder[j]]
+      
+      # make plot2D.a
+      plot_2D.b(x,y, 
+         xlab= "", xlim=xlim,
+         ylab= "" , ylim=ylim,
+         nbin=100, 
+         x_sub=x[Group_logical], 
+         y_sub=y[Group_logical],
+         PE=pecorr,
+         x_sub_green=x[Green_logical],
+         y_sub_green=y[Green_logical],
+         x_sub_blue=x[Blue_logical],
+         y_sub_blue=y[Blue_logical],
+         x_sub_golden=x[Golden_logical],
+         y_sub_golden=y[Golden_logical]
+         ) 
+      mtext(xorder[i], side=2)
+      mtext(yorder[j], side=1)
+    } #end j loop
+    print(i)
+    } #end i loop
+  dev.off()
+
+}# end function
 ```
 
 
-THEN MAKE NEW FILE!
+### Covariance based on random sample of 1 SNP from each gcontig
 
-loop through each phenotype-environment combo.  For each combo, flip GWAS to match the GEA and polarize the GEA scores so they are in matching direction to PE. (The 'flip' is going to be different for each SNP depending on how it was coded, while the 'polarization' multiplies all SNPs by -1 or by 1 depending on the slope between the phenotype and the environment.)
+I realized that I need a second function to calculate covariance based on SNP sampled from independent gtcontigs that match MAF to an observed sample.
+
+```{r}
+length(gtcontig_array_names)
+
+getOneIndexEach_gtcontig_Cov <- function(array, array_names, value1, value2,  num, logicvect=NULL){
+  ## each index in array is a gtcontig and holds the indexes of SNPs
+    ## that can be sampled, array_names is the gtcontig name
+  ## value1 and value2 are vectors of values with length (nrow(unlist(array))) to calculate the covariance between
+  ## num is the number of gtcontigs to draw from the data
+  ## logicvect is a vector of T/F with length(array_names)
+  ## indicating whether or not to sample that gtcontig
+  ind <- 1:length(array_names)
+  ## the following code returns the gtcontigs to sample from gtcontig_array
+  if(length(logicvect)==0){
+      array_ind <- sample(ind, num, replace=FALSE)
+    }else{
+      array_ind <- sample(ind, num, replace=FALSE, prob=logicvect)
+    }
+  ## the following code returns the row indices in results_pine3 to sample values from
+  SNProws <- sapply(array_ind, function(i){sample(array[[i]], 1)})
+  return(cov(value1[SNProws], value2[SNProws]))
+}
 
 
-```{r, label="Loop through PE file"}
+try1 <- replicate(1000, getOneIndexEach_gtcontig_Cov(gtcontig_array, gtcontig_array_names, results_pine3$LAT_rhoave, results_pine3$Fall_cold_injury_rhoave_BAYENV,  219, logicvect=NULL))
+hist(try1*-1)  # negative PE association
+
+```
+
+### Group 1: Top SNP's from Sam's top candidates
+
+```{r,label="Top SNP's from Sam's top candidates" }
+  superdf <- results_pine3[results_pine3$pine_super_p9 | 
+                           results_pine3$pine_super_raw_p9,]
+  names(results_pine3)[grep("raw_rho", names(results_pine3))]
+  cols_raw <- grep("raw_rho", names(results_pine3))
+  is.superdf <- matrix(NA, nrow(superdf), length(cols_raw))
+  colnames(is.superdf) <- names(results_pine3)[cols_raw]
+  tail <- 0.999
+  for (i in 1:length(cols_raw)){
+    a<- sort(abs(results_pine3[,cols_raw[i]]), na.last = NA)
+    sorted.index <- round(length(a)*.999)
+    rho_cutoff <- a[sorted.index]
+    is.superdf[,i] <- abs(superdf[,cols_raw[i]])>rho_cutoff
+    print(i)
+  }
+  num.var.raw.out <- rowSums(is.superdf,na.rm = TRUE)
+  nrow(superdf) #total number of SNPs in super contigs
+  sum(num.var.raw.out>0) # number of super SNPs in super contigs
+  
+#number gcontigs represented by all super vs. super SNPs
+  length(unique(superdf$gtcontig)) # all Sam's super contigs
+  length(unique(superdf$gtcontig[num.var.raw.out>0])) # super contigs with superSNPs
+
+  ### Dataframe of Group 1
+  Group1_allSuperSNPs <- superdf[num.var.raw.out>0,]
+  dim(Group1_allSuperSNPs)
+  ### Logical Group 1
+  Group1_logical <- results_pine3$gcontig__gcontig_pos %in% Group1_allSuperSNPs$gcontig__gcontig_pos
+
+
+  ### Group 1 array for boostrap covariancepng(file = "GroupEnvByPheno.png",width=50,height=66, unit="in", res=300)
+  Group1_allSuperSNPs_array_names <- unique(Group1_allSuperSNPs$gtcontig)
+  Group1_allSuperSNPs_array <- sapply(Group1_allSuperSNPs_array_names, getInd2, Group1_allSuperSNPs)
+    #snps per contig
+  G1_df <- data.frame(contig=Group1_allSuperSNPs_array_names,
+             numOutSnps=as.numeric(sapply(Group1_allSuperSNPs_array, length)))
+  
+  dim(G1_df)
+  head(G1_df)
+
+  ### Top candidates
+  G1_df <- G1_df[order(G1_df$numOutSnps),]
+  G1_df[G1_df$numOutSnps>2,]
+  G1_df$numTotSnps <- sapply(1:nrow(G1_df), function(i){sum(results_pine3$gtcontig==G1_df$contig[i])})
+  G1_df
+  G1_df$prop <- G1_df$numOutSnps/G1_df$numTotSnps
+  G1_df <- G1_df[order(G1_df$prop),]
+  head(G1_df,50)
+  tail(G1_df,60)
+
+  topcan <- as.character(G1_df$contig[G1_df$prop>0.05])
+  length(topcan)
+  ## Which ones are super convergent outliers
+  results_pine3$gtcontig[Group1_logical & results_pine3$pine_super_convergent]
+
+  #results_pine3$X_annotation[Group1_logical]
+
+  ### Annotations on tope genes
+  for (i in 1:length(topcan)){
+    print(topcan[i])
+    numout <- G1_df$numOutSnps[G1_df$contig==topcan[i]]
+    print(c("Num Outliers:", numout))
+    print(c("NumSNPs:", sum(results_pine3$gtcontig==topcan[i])))
+    print(as.character(results_pine3$X_annotation[results_pine3$gtcontig==topcan[i] & Group1_logical]))
+  } #end for loop
+### Contig    	Number outlier SNPs in LAT/DD0
+### comp60064_c0_seq1         46
+### comp1563_c0_seq1         19
+### comp73926_c0_seq1         13
+
+### Contig      Number outlier SNPs in MAP/CMD
+#comp1565_c0_seq1         24
+#comp2237_c0_seq1          9
+#comp9553_c0_seq1          8
+```
+
+### Group 1 ideas for testing
+
+```{r}
+### Compare null to observed covariance
+        ### Function to arrange for bootstrap covariance
+  getInd2 <- function(gtcontig, dataframe){
+    return(which(dataframe$gtcontig %in% gtcontig))
+  }
+
+    try2 <- replicate(1000, getOneIndexEach_gtcontig_Cov(Group1_allSuperSNPs_array, Group1_allSuperSNPs_array_names, Group1_allSuperSNPs$LAT_rhoave, Group1_allSuperSNPs$Fall_cold_injury_rhoave_BAYENV, 219, logicvect=NULL))
+    
+    plot(density(try1*-1), col="black", lwd=2, xlim=c(0,0.005))
+    points(density(try2*-1), type="l", col="blue", lwd=2)
+
+    # Get 95% CI
+    Ho <- c(sort(try1)[25], sort(try1)[975])*-1  # null
+    H1 <- c(sort(try2)[25], sort(try2)[975])*-1 # super SNPs
+    H1[1] > Ho[2] #upper tail test
+    H1[2] < Ho[1] #lower tail test
+```
+
+### Group 1 Make some comparison plots
+```{r}
+plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+       y=results_pine3$LAT_rhoave, 
+       xlab= "FCI rho Bayenv", 
+       ylab= "LAT rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub=superdf$LAT_rhoave[num.var.raw.out>0],
+       PE=-0.42)
+
+plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "FCI rho Bayenv", 
+       ylab= "LAT rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub=superdf$MAP_rhoave[num.var.raw.out>0],
+       PE=0.25)
+
+plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "FCI rho Bayenv", 
+       ylab= "LAT rho Bayenv" , 
+       nbin=100, xlim=c(-1,1), ylim=c(-1,1),
+       x_sub=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
+       y_sub=superdf$MAP_raw_rho[num.var.raw.out>0],
+       PE=0.25)
+
+plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+       y=results_pine3$Eref_rhoave, 
+       xlab= "FCI rho Bayenv", 
+       ylab= "LAT rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub=superdf$Eref_rhoave[num.var.raw.out>0],
+       PE=0.26)
+
+
+plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
+       y=results_pine3$LAT_raw_rho, 
+       xlab= "FCI rho raw", 
+       ylab= "LAT rho raw" , 
+       nbin=100, xlim=c(-1,1), ylim=c(-1,1),
+       x_sub=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
+       y_sub=superdf$LAT_raw_rho[num.var.raw.out>0],
+       PE=-0.42)
+
+
+plot_2D.a(x=results_pine3$Fall_cold_injury_snp_effect,
+       y=results_pine3$LAT_snp_effect_GCTA, 
+       xlab= "FCI gcta", 
+       ylab= "LAT gcta" , 
+       nbin=100, xlim=NULL, ylim=NULL,
+       x_sub=superdf$Fall_cold_injury_snp_effect[num.var.raw.out>0], 
+       y_sub=superdf$LAT_snp_effect_GCTA[num.var.raw.out>0],
+       PE=-0.42)
+
+````
+
+### Make some outlier plots for everything
+
+```{r}
+MakeOutlierPlot("Group1_EnvByPhenoBayenv2.pdf", Group1_logical, type="Bayenv")
+MakeOutlierPlot("Group1_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", xlim=c(-1,1), ylim=c(-1,1))
+```
+
+### Make outlier plots for candidate genes
+
+```{r}
+ ### Loop through top genes
+  for (i in 1:length(topcan)){
+    magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
+    blueLogical <- results_pine3$gtcontig==topcan[i] & !Group1_logical #other SNPs in the gene
+    nameBay <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "Bayenv.pdf", sep="_")
+    nameRaw <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "Raw.pdf", sep="_")
+    MakeOutlierPlot(nameBay, magLogical, type="Bayenv", Blue_logical = blueLogical)
+    MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1))
+    print(c("done with", i, "of", length(topcan)))
+  } #end for loop
+
+### Same Loop through top genes but for subset of envi
+  for (i in 1:length(topcan)){
+    magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
+    blueLogical <- results_pine3$gtcontig==topcan[i] & !Group1_logical #other SNPs in the gene
+    nameBay <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "BayenvSub.pdf", sep="_")
+    nameRaw <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "RawSub.pdf", sep="_")
+    MakeOutlierPlot(nameBay, magLogical, type="Bayenv", Blue_logical = blueLogical,envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20)
+    MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1), envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20)
+    print(c("done with", i, "of", length(topcan)))
+  } #end for loop
+
+
+MakeOutlierPlot("Group1_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", xlim=c(-1,1), ylim=c(-1,1))
+```
+
+
+
+### Group 2: Fall and Winter CI in Lat and Low-temp variables
+```{r}
+colnames(is.superdf)
+Group2cols.superdf <- colnames(is.superdf) %in% c(
+                                          #"Fall_cold_injury_p_raw_p",
+                                          #"Fall_cold_injury_p_raw_rho",                                          #"Winter_cold_injury_p_raw_p",
+                                          #"Winter_cold_injury_p_raw_rho",
+                                          "LAT_raw_rho",#,"LAT_raw_p")#,                                     
+                                            #"MAT_raw_rho", "MAT_raw_p",
+                                          "DD_0_raw_rho")#,#, "DD_0_raw_p",
+                                         # "TD_raw_rho")#, "TD_raw_p")#,
+                                         # "MCMT_raw_rho",# "MCMT_raw_p",
+                                          #"EMT_raw_rho", #"EMT_raw_p",
+                                          #"FFP_raw_rho", #"FFP_raw_p",
+                                          #"eFFP_raw_rho", #"eFFP_raw_p",
+                                          #"NFFD_raw_rho")#,#"NFFD_raw_p")
+
+
+ ### Dataframe of Group 2
+  Group2_allSuperSNPs <- superdf[rowSums(is.superdf[,Group2cols.superdf],na.rm = TRUE)>0,]
+  
+  ### Logical Group 2
+  Group2_logical <- results_pine3$gcontig__gcontig_pos %in% Group2_allSuperSNPs$gcontig__gcontig_pos
+  ## Check these two are equal
+  nrow(Group2_allSuperSNPs)
+  sum(Group2_logical)
+
+  ### Group2 array for boostrap covariance
+  Group2_allSuperSNPs_array_names <- unique(Group2_allSuperSNPs$gtcontig)
+  Group2_allSuperSNPs_array <- sapply(Group2_allSuperSNPs_array_names, getInd2, Group2_allSuperSNPs)
+  length(Group2_allSuperSNPs_array)
+  #snps per contig
+  data.frame(contig=Group2_allSuperSNPs_array_names,
+             numOutSnps=as.numeric(sapply(Group2_allSuperSNPs_array, length)))
+```
+
+### Plot Group 2 - F/WCI and TEMP
+```{r}
+      plot_2D.b(results_pine3$Fall_cold_injury_p_raw_rho,
+                results_pine3$LAT_raw_rho, 
+         xlab= "", xlim=c(-1,1),
+         ylab= "" , ylim=c(-1,1),
+         nbin=100, 
+         x_sub=results_pine3$Fall_cold_injury_p_raw_rho[Group2_logical], 
+         y_sub=results_pine3$LAT_raw_rho[Group2_logical],
+         PE=-0.42)
+
+ plot_2D.a(results_pine3$Fall_cold_injury_rhoave_BAYENV,
+                results_pine3$LAT_rhoave, 
+         xlab= "", xlim=c(-0.3,0.3),
+         ylab= "" , ylim=c(-0.3,0.3),
+         nbin=100, 
+         x_sub=results_pine3$Fall_cold_injury_rhoave_BAYENV[Group2_logical], 
+         y_sub=results_pine3$LAT_rhoave[Group2_logical],
+         PE=-0.42)
+
+### Contig  		Number outlier SNPs
+### comp60064_c0_seq1         46
+### comp1563_c0_seq1         19
+### comp73926_c0_seq1         13
+xorder
+yorder
+envi_ind=c(2, 5, 6, 9, 10, 13, 17, 19, 20)
+pheno_ind=c(3,5,9,10,12,15:17)
+xorder[envi_ind]
+yorder[pheno_ind]
+
+sum(Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1") #should equal 46
+
+### All 
+MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoBayenv1.pdf", Group2_logical, type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+    Blue_logical=Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1",
+    Green_logical= Group2_logical & results_pine3$gtcontig=="comp1563_c0_seq1",
+    Golden_logical=Group2_logical & results_pine3$gtcontig=="comp73926_c0_seq1")
+
+MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw1.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+                    Blue_logical=Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1",
+    Green_logical= Group2_logical & results_pine3$gtcontig=="comp1563_c0_seq1",
+    Golden_logical=Group2_logical & results_pine3$gtcontig=="comp73926_c0_seq1")
+```
+
+### Group 2 some ideas for null testing
+```{r}
+cond <- Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1"
+condnull <- !Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1" 
+obs <- cov(results_pine3$Fall_cold_injury_p_raw_rho[cond],results_pine3$LAT_raw_rho[cond])
+null1 <- replicate(1000, cov(sample(results_pine3$Fall_cold_injury_p_raw_rho[cond]),sample(results_pine3$LAT_raw_rho[cond])))
+hist(null1) # this is centered on 0 but has a wider distribution
+getnull <- function(){                   
+  n <- sample(which(condnull), size=49, replace=TRUE) 
+  cov(results_pine3$Fall_cold_injury_p_raw_rho[n], results_pine3$LAT_raw_rho[n], use="complete.obs")
+}
+null2 <- replicate(1000, getnull() )
+hist(null2)  # has a narrow distribution
+```
+
+### Group 3 CMD/MAP RAW outliers
+```{r}
+  Group3cols.superdf <- colnames(is.superdf) %in% c("CMD_raw_rho", "MAP_raw_rho")
+
+ ### Dataframe of Group 3
+  Group3_allSuperSNPs <- superdf[rowSums(is.superdf[,Group3cols.superdf],na.rm = TRUE)>0,]
+   
+  ### Logical Group 3
+  Group3_logical <- results_pine3$gcontig__gcontig_pos %in% Group3_allSuperSNPs$gcontig__gcontig_pos
+  ## Check these two are equal
+  nrow(Group3_allSuperSNPs)
+  sum(Group3_logical)
+
+  ### Group3 array for boostrap covariance
+  Group3_allSuperSNPs_array_names <- unique(Group3_allSuperSNPs$gtcontig)
+  Group3_allSuperSNPs_array <- sapply(Group3_allSuperSNPs_array_names, getInd2, Group3_allSuperSNPs)
+  length(Group3_allSuperSNPs_array)
+  #snps per contig
+  data.frame(contig=Group3_allSuperSNPs_array_names,
+             numOutSnps=as.numeric(sapply(Group3_allSuperSNPs_array, length)))
+  #34 contigs
+```
+
+### Plot Group 3 RAW CMD/MAP
+```{r}
+#comp1565_c0_seq1         24
+#comp2237_c0_seq1          9
+#comp9553_c0_seq1          8
+
+MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoBayenv1.pdf", Group3_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+    Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
+    Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
+    Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1") 
+
+
+MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoRaw1.pdf", Group3_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+    Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
+    Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
+    Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1")
+
+```
+
+
+### Compare Group 2 and Group 3
+```{r}
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoBayenv1.pdf", Group2_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+    Blue_logical=Group3_logical) 
+
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoRaw1.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+    Blue_logical=Group3_logical)
+
+MakeOutlierPlot("Group1sm_EnvByPhenoBayenv1.pdf", Group1_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20) 
+
+MakeOutlierPlot("Group1sm_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1))
+```
+
+### Overview:
+- took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
+- reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
+- I noticed two groups of behavior.  Chose variables that had strongest PE associations.
+  - Group temp: subset of Group 1 that are raw outliers in lat and DD0
+  - Group moisture: subset of Group 1 that are raw outliers in MAP and CMD
+
+Red genes (LAT and DD0) Blue genes (MAP and CMD) in Bayenv2:
+* Both read and blue decrease FWCI with latitude and DD0 (true in raw)
+* Both decrease height and MGR with DD0 (true in raw)
+* Red decrease FWCI with elevation, while blue increase FWCI with elevation (true in raw for WCI in elevation)
+* Red increase FWSCI, MGR, height, and diam with MAP, while blue do the opposite (true for raw)
+* red increase FWCI, MCG, height, and diam with FFP, while blue do the opposite (in raw associations blue do nothing)
+* red and blue increase FWCI with CMD, and increase height and diam 
+
+
+### OLD CODE
+
+```{r, label="Loop through PE file", eval=FALSE}
 PE$pine_score1_bayenv <- PE$pine_score2_bayenv <- PE$pine_slope_bayenv <- NA
 
 results_pine2 <- results_pine
