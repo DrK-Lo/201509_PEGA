@@ -229,7 +229,7 @@ head(results_pine2)
 
 
 
-Next, flip all SNPs so they are in alphabetical order. 
+## Next, flip all SNPs so they are in alphabetical order. 
 
 ```{r}
 results_pine3 <- results_pine2

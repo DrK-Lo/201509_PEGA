@@ -5,3 +5,4 @@ analysis/figure*
 .Rhistory
 analysis/*.pdf
 figures*
+analysis/old*

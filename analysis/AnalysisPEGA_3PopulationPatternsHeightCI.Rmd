@@ -1,0 +1,104 @@
+---
+title: "AnalysisPEGA_3PopulationPatternsHeightCI"
+author: "Katie Lotterhos"
+date: "May 14, 2016"
+output: html_document
+---
+
+### Explore linear models for height and CI traits
+```{r}
+#install.packages("rgl")
+library(rgl)
+ff <- read.table ("../data/MAT06-BLUEs&Climate-pine.csv", sep = ",", header = T)
+
+ee <- ff[complete.cases(ff),]
+
+head(ee)
+
+x<- ee$ColdInjuryFallS02_Mean
+y <- ee$TotalWeight
+z <- ee$MAT
+
+plot(x, y, xlab="FCI", ylab="Total Weight")
+abline(lm(y~x))
+plot(z, y, xlab="MAT", ylab="Total Weight")
+abline(lm(y~z))
+plot(z, x, xlab="MAT", ylab="FCI")
+abline(lm(x~z))  
+
+lm3 <- lm(x~y*z)
+lm4 <- lm (y~x*z)
+lm5<- lm (z~x*y)
+
+anova(lm3)
+anova(lm4)
+anova(lm5)
+
+summary(lm3)
+summary(lm4)
+summary(lm5)
+
+head(ee)
+plot(ee$Latitude, ee$Longitude,col=0, bty="n")
+text(ee$Latitude, ee$Longitude, labels=as.character(ee$ProvincialSeedlotsID), cex=0.5)
+
+plot(ee$TotalWeight, ee$ColdInjuryFallS02_Mean, pch=19, cex=0.5)
+abline(lm(ee$ColdInjuryFallS02_Mean~ee$TotalWeight))
+
+
+
+## Populations with big trees and high cold injury or small trees and low CI
+  CI_quads <- summary(x)
+  Height_quads <- summary(y)
+
+  TallHighCI  <- (x > CI_quads[5] & y > Height_quads[5]) 
+  ShortLowCI <- (x < CI_quads[2] & y < Height_quads[2])
+## Populations with Short trees and high cold injury or Tall trees and low CI
+  ShortHighCI  <- (x > CI_quads[5] & y < Height_quads[2]) 
+  TallLowCI <- (x < CI_quads[2] & y > Height_quads[5])
+        
+
+ (Pops_TallHighCI_ShortLowCI <- ee$ProvincialSeedlotsID[TallHighCI | ShortLowCI])
+  (Pops_ShortHighCI_TallLowCI <- ee$ProvincialSeedlotsID[ShortHighCI | TallLowCI])
+
+  sum(Pops_TallHighCI_ShortLowCI %in% Pops_ShortHighCI_TallLowCI)
+  # just a check these shouldn't overlap
+
+  TallHighCI_orShortLowCI <- TallHighCI | ShortLowCI
+  ShortHighCI_orTallLowCI <- ShortHighCI | TallLowCI
+
+## Lat long plot
+  pdf("PopulationPlot_ColdInjuryAndTotalWeight.pdf", width=14, height=14, bg="white")
+  par(mfrow=c(2,2))
+  plot(ee$Latitude~ ee$Longitude,pch=19, cex=0.5, bty="n", main = "Populations with low total weight\nand high cold injury\n(sucky trees drive genome-wide pattern)")
+  points(ee$Latitude[ShortHighCI]~ee$Longitude[ShortHighCI],  cex=2, col="blue", pch=24, bg="magenta")
+
+  plot(ee$Latitude~ ee$Longitude,pch=19, cex=0.5, bty="n", main = "Populations with high total weight\nand low cold injury\n(no trade-off, drive genome-wide pattern)")
+  points(ee$Latitude[TallLowCI]~ ee$Longitude[TallLowCI],  cex=2, col="blue", pch=24, bg="magenta")
+
+  plot(ee$Latitude~ ee$Longitude,pch=19, cex=0.5, bty="n", main = "Populations with high total weight\nand high cold injury\n(shapes trade-off)")
+  points(ee$Latitude[TallHighCI]~ ee$Longitude[TallHighCI],  cex=2, col="blue", pch=24, bg="magenta")
+
+  plot(ee$Latitude~ ee$Longitude,pch=19, cex=0.5, bty="n", main = "Populations with low total weight\nand low cold injury \n(shapes trade-off)")
+  points(ee$Latitude[ShortLowCI]~ ee$Longitude[ShortLowCI],  cex=2, col="blue", pch=24, bg="magenta")
+
+  dev.off()
+### end plot
+
+### Boxplot
+  HeightCI_ind <- rep("middle", nrow(ee))
+  HeightCI_ind[ShortHighCI] <- "1_Low weight, High CI\n(sucky trees)"
+  HeightCI_ind[TallHighCI] <- "2_High weight, High CI\n(tradeoff)"
+  HeightCI_ind[TallLowCI] <- "1_High weight, Low CI\n(no tradeoff)"  
+  HeightCI_ind[ShortLowCI] <- "2_Low weight, Low CI\n(tradeoff)"
+
+pdf("PopulationBoxplot_CIandTotalWeight.pdf", width=12, height=12, bg="white")
+par(mfrow=c(3,2), mar=c(10, 4,1,1))
+  boxplot(ee$MAT ~ HeightCI_ind, ylab="MAT", las=2)
+  boxplot(ee$Elevation ~ HeightCI_ind, ylab="Elevation", las=2)
+  boxplot(ee$Latitude ~ HeightCI_ind, ylab="Latitude", las=2)
+  boxplot(ee$log.MAP ~ HeightCI_ind, ylab="MAP",las=2)
+  boxplot(ee$DD0 ~ HeightCI_ind, ylab="Degree-days < 0C",las=2)
+dev.off()
+ ```
+

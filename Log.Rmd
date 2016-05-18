@@ -7,6 +7,31 @@ output: html_document
 
 This log is in Blog-style format (newest at top)
 
+## May 6, 2016
+
+I had a breakthrough this week in how to analyze and visualize everything.  I identified two groups of genes - a temperature group (RED) and a moisture group (BLUE), that have sometimes similar and sometimes contrasting behavior to each other and to population structure.
+
+These groups also help explain apparent trade-offs between cold injury and height.  In the phenotype data, we find that fall/winter cold injury (FWCI) decreases with mean annual temperature (MAT) and height (season 2, HS2) also decreases with MAT.  However, if we plot population averages of FWCI and HS2 against each other, we see an apparent negative correlation between these two traits, which suggests a tradeoff.  These two observations seem at odds with one another, because the correlation between the traits is negative, but both traits have positive associations with the same environmental variable.
+
+However, the RED and BLUE groups show no such trade off - alleles at higher frequency in colder latitudes are also found at higher frequency in trees with less CI and smaller heights.  These groups are evolving against the genome-wide pattern for FWCI and HS2.
+
+
+
+Overview:
+- took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
+- reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
+- I noticed two groups of behavior.  Chose variables that had strongest PE associations.
+  - Group temp: subset of Group 1 that are raw outliers in lat and DD0
+  - Group moisture: subset of Group 1 that are raw outliers in MAP and CMD
+
+Red genes (LAT and DD0) Blue genes (MAP and CMD) in Bayenv2:
+* Both read and blue decrease FWCI with latitude and DD0 (true in raw)
+* Both decrease height and MGR with DD0 (true in raw)
+* Red decrease FWCI with elevation, while blue increase FWCI with elevation (true in raw for WCI in elevation)
+* Red increase FWSCI, MGR, height, and diam with MAP, while blue do the opposite (true for raw)
+* red increase FWCI, MCG, height, and diam with FFP, while blue do the opposite (in raw associations blue do nothing)
+* red and blue increase FWCI with CMD, and increase height and diam 
+
 ## April 20, 2016
 
 I looked into one group of super outliers a bit more: the outliers on the FCI-Lat association in Bayenv.  A majority of them are from one contig that is on your super outlier list at p9:

@@ -112,11 +112,12 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
     
     lines(c(-100,100), c(0,0), col="grey") #add x axis
     lines(c(0,0), c(-100,100), col="grey") # add y axis
+    P <- 0.005 # cutoff for linear model significance
     if (abs(PE)>0.1){
       abline(lm(y~x), lwd=2)
       if(length(x_sub)>5){
         m <- lm(y_sub~x_sub)
-        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="orange", lwd=2)}
+        if(summary(m)$coef[2,4] < P){abline(m, col="orange", lwd=2)}
         }
       }
   
@@ -124,21 +125,21 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
       points(x_sub_green, y_sub_green, pch=24, cex=1, col="darkgreen", bg="green")
       if (abs(PE)>0.1 & length(x_sub_green)>5){
         m <- lm(y_sub_green~x_sub_green)
-        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="green", lwd=2)}
+        if(summary(m)$coef[2,4] < P){abline(m, col="green", lwd=2)}
       }
     }#end if x_sub_green
     if(length(x_sub_blue)>0){
       points(x_sub_blue, y_sub_blue, pch=24, cex=1, col="blue", bg="lightblue")
       if (abs(PE)>0.1 & length(x_sub_blue)>5){
         m <- lm(y_sub_blue~x_sub_blue)
-        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="blue", lwd=2)}
+        if(summary(m)$coef[2,4] < P){abline(m, col="blue", lwd=2)}
       }
     }#end if x_sub_blue
       if(length(x_sub_golden)>0){
       points(x_sub_golden, y_sub_golden, pch=24, cex=1, col="darkgoldenrod4", bg="darkgoldenrod")
       if (abs(PE)>0.1 & length(x_sub_golden)>5){
         m <- lm(y_sub_golden~x_sub_golden)
-        if(summary(m)$coef[2,4] < 1e-01){abline(m, col="darkgoldenrod", lwd=2)}
+        if(summary(m)$coef[2,4] < P){abline(m, col="darkgoldenrod", lwd=2)}
       }
     }#end if x_sub_blue
     
@@ -234,6 +235,10 @@ MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(
 I realized that I need a second function to calculate covariance based on SNP sampled from independent gtcontigs that match MAF to an observed sample.
 
 ```{r}
+  getInd2 <- function(gtcontig, dataframe){
+    return(which(dataframe$gtcontig %in% gtcontig))
+  }
+
 length(gtcontig_array_names)
 
 getOneIndexEach_gtcontig_Cov <- function(array, array_names, value1, value2,  num, logicvect=NULL){
@@ -341,12 +346,10 @@ hist(try1*-1)  # negative PE association
 
 ### Group 1 ideas for testing
 
-```{r}
+```{r,eval=FALSE}
 ### Compare null to observed covariance
         ### Function to arrange for bootstrap covariance
-  getInd2 <- function(gtcontig, dataframe){
-    return(which(dataframe$gtcontig %in% gtcontig))
-  }
+
 
     try2 <- replicate(1000, getOneIndexEach_gtcontig_Cov(Group1_allSuperSNPs_array, Group1_allSuperSNPs_array_names, Group1_allSuperSNPs$LAT_rhoave, Group1_allSuperSNPs$Fall_cold_injury_rhoave_BAYENV, 219, logicvect=NULL))
     
@@ -362,7 +365,7 @@ hist(try1*-1)  # negative PE association
 
 ### Group 1 Make some comparison plots
 ```{r}
-plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$LAT_rhoave, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
@@ -371,7 +374,7 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y_sub=superdf$LAT_rhoave[num.var.raw.out>0],
        PE=-0.42)
 
-plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$MAP_rhoave, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
@@ -380,7 +383,7 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y_sub=superdf$MAP_rhoave[num.var.raw.out>0],
        PE=0.25)
 
-plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
+plot_2D.b(x=results_pine3$Fall_cold_injury_p_raw_rho,
        y=results_pine3$MAP_raw_rho, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
@@ -389,7 +392,7 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
        y_sub=superdf$MAP_raw_rho[num.var.raw.out>0],
        PE=0.25)
 
-plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
+plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$Eref_rhoave, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
@@ -399,7 +402,7 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        PE=0.26)
 
 
-plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
+plot_2D.b(x=results_pine3$Fall_cold_injury_p_raw_rho,
        y=results_pine3$LAT_raw_rho, 
        xlab= "FCI rho raw", 
        ylab= "LAT rho raw" , 
@@ -409,7 +412,7 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_p_raw_rho,
        PE=-0.42)
 
 
-plot_2D.a(x=results_pine3$Fall_cold_injury_snp_effect,
+plot_2D.b(x=results_pine3$Fall_cold_injury_snp_effect,
        y=results_pine3$LAT_snp_effect_GCTA, 
        xlab= "FCI gcta", 
        ylab= "LAT gcta" , 
@@ -422,70 +425,18 @@ plot_2D.a(x=results_pine3$Fall_cold_injury_snp_effect,
 
 ### Make some outlier plots for everything
 
-```{r}
-MakeOutlierPlot("Group1_EnvByPhenoBayenv2.pdf", Group1_logical, type="Bayenv")
-MakeOutlierPlot("Group1_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", xlim=c(-1,1), ylim=c(-1,1))
-```
-
-### Make outlier plots for candidate genes
-
-```{r}
- ### Loop through top genes
-  for (i in 1:length(topcan)){
-    magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
-    blueLogical <- results_pine3$gtcontig==topcan[i] & !Group1_logical #other SNPs in the gene
-    nameBay <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
-                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
-                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
-                     topcan[i], "Bayenv.pdf", sep="_")
-    nameRaw <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
-                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
-                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
-                     topcan[i], "Raw.pdf", sep="_")
-    MakeOutlierPlot(nameBay, magLogical, type="Bayenv", Blue_logical = blueLogical)
-    MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1))
-    print(c("done with", i, "of", length(topcan)))
-  } #end for loop
-
-### Same Loop through top genes but for subset of envi
-  for (i in 1:length(topcan)){
-    magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
-    blueLogical <- results_pine3$gtcontig==topcan[i] & !Group1_logical #other SNPs in the gene
-    nameBay <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
-                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
-                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
-                     topcan[i], "BayenvSub.pdf", sep="_")
-    nameRaw <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
-                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
-                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
-                     topcan[i], "RawSub.pdf", sep="_")
-    MakeOutlierPlot(nameBay, magLogical, type="Bayenv", Blue_logical = blueLogical,envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20)
-    MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1), envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20)
-    print(c("done with", i, "of", length(topcan)))
-  } #end for loop
-
-
+```{r, eval=FALSE}
+MakeOutlierPlot("Group1_EnvByPhenoBayenv1.pdf", Group1_logical, type="Bayenv")
 MakeOutlierPlot("Group1_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", xlim=c(-1,1), ylim=c(-1,1))
 ```
 
 
-
-### Group 2: Fall and Winter CI in Lat and Low-temp variables
+### Group 2: Lat and Low-temp variables
 ```{r}
 colnames(is.superdf)
 Group2cols.superdf <- colnames(is.superdf) %in% c(
-                                          #"Fall_cold_injury_p_raw_p",
-                                          #"Fall_cold_injury_p_raw_rho",                                          #"Winter_cold_injury_p_raw_p",
-                                          #"Winter_cold_injury_p_raw_rho",
-                                          "LAT_raw_rho",#,"LAT_raw_p")#,                                     
-                                            #"MAT_raw_rho", "MAT_raw_p",
-                                          "DD_0_raw_rho")#,#, "DD_0_raw_p",
-                                         # "TD_raw_rho")#, "TD_raw_p")#,
-                                         # "MCMT_raw_rho",# "MCMT_raw_p",
-                                          #"EMT_raw_rho", #"EMT_raw_p",
-                                          #"FFP_raw_rho", #"FFP_raw_p",
-                                          #"eFFP_raw_rho", #"eFFP_raw_p",
-                                          #"NFFD_raw_rho")#,#"NFFD_raw_p")
+                                          "LAT_raw_rho",
+                                          "DD_0_raw_rho")
 
 
  ### Dataframe of Group 2
@@ -517,7 +468,7 @@ Group2cols.superdf <- colnames(is.superdf) %in% c(
          y_sub=results_pine3$LAT_raw_rho[Group2_logical],
          PE=-0.42)
 
- plot_2D.a(results_pine3$Fall_cold_injury_rhoave_BAYENV,
+ plot_2D.b(results_pine3$Fall_cold_injury_rhoave_BAYENV,
                 results_pine3$LAT_rhoave, 
          xlab= "", xlim=c(-0.3,0.3),
          ylab= "" , ylim=c(-0.3,0.3),
@@ -530,29 +481,40 @@ Group2cols.superdf <- colnames(is.superdf) %in% c(
 ### comp60064_c0_seq1         46
 ### comp1563_c0_seq1         19
 ### comp73926_c0_seq1         13
+```
+
+### Designate small groups
+```{r}
 xorder
-yorder
-envi_ind=c(2, 5, 6, 9, 10, 13, 17, 19, 20)
-pheno_ind=c(3,5,9,10,12,15:17)
+envi_ind=c(2, 5, 6, 9, 10, 11, 12, 13, 17)
 xorder[envi_ind]
+yorder
+pheno_ind=c(1,2,7,16,17)
 yorder[pheno_ind]
+envi_ind_sm <- c(2,9,10)
+xorder[envi_ind_sm]
+pheno_ind_sm <- c(1,16)
+yorder[pheno_ind_sm]
 
 sum(Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1") #should equal 46
+```
 
+```{r, eval=FALSE}
 ### All 
-MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoBayenv1.pdf", Group2_logical, type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoBayenv2.pdf", Group2_logical, type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24,
     Blue_logical=Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1",
     Green_logical= Group2_logical & results_pine3$gtcontig=="comp1563_c0_seq1",
     Golden_logical=Group2_logical & results_pine3$gtcontig=="comp73926_c0_seq1")
 
-MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw1.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw2.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24, xlim=c(-1,1), ylim=c(-1,1),
                     Blue_logical=Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1",
     Green_logical= Group2_logical & results_pine3$gtcontig=="comp1563_c0_seq1",
     Golden_logical=Group2_logical & results_pine3$gtcontig=="comp73926_c0_seq1")
 ```
 
+
 ### Group 2 some ideas for null testing
-```{r}
+```{r, eval=FALSE}
 cond <- Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1"
 condnull <- !Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1" 
 obs <- cov(results_pine3$Fall_cold_injury_p_raw_rho[cond],results_pine3$LAT_raw_rho[cond])
@@ -590,18 +552,18 @@ hist(null2)  # has a narrow distribution
 ```
 
 ### Plot Group 3 RAW CMD/MAP
-```{r}
+```{r,eval=FALSE}
 #comp1565_c0_seq1         24
 #comp2237_c0_seq1          9
 #comp9553_c0_seq1          8
 
-MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoBayenv1.pdf", Group3_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoBayenv1.pdf", Group3_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24,
     Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
     Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
     Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1") 
 
 
-MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoRaw1.pdf", Group3_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoRaw1.pdf", Group3_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24, xlim=c(-1,1), ylim=c(-1,1),
     Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
     Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
     Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1")
@@ -610,18 +572,111 @@ MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoRaw1.pdf", Group3_logical, type="Raw",
 
 
 ### Compare Group 2 and Group 3
-```{r}
-MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoBayenv1.pdf", Group2_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20,
+```{r, eval=FALSE}
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoBayenv1.pdf", Group2_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24,
+    Blue_logical=Group3_logical) 
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoBayenv_sm.pdf", Group2_logical , type="Bayenv", envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12,
     Blue_logical=Group3_logical) 
 
-MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoRaw1.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1),
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoRaw1.pdf", Group2_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24, xlim=c(-1,1), ylim=c(-1,1),
+    Blue_logical=Group3_logical)
+MakeOutlierPlot("Group2_vs_Group3_EnvByPhenoRaw1_sm.pdf", Group2_logical, type="Raw", envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12, xlim=c(-1,1), ylim=c(-1,1),
     Blue_logical=Group3_logical)
 
-MakeOutlierPlot("Group1sm_EnvByPhenoBayenv1.pdf", Group1_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20) 
+MakeOutlierPlot("Group1sm_EnvByPhenoBayenv1.pdf", Group1_logical , type="Bayenv", envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12) 
 
-MakeOutlierPlot("Group1sm_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=24, height=20, xlim=c(-1,1), ylim=c(-1,1))
+MakeOutlierPlot("Group1sm_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12, xlim=c(-1,1), ylim=c(-1,1))
 ```
 
+```{r}
+x=results_pine3$root_wt_shoot_wt_1_rhoave_BAYENV 
+  # Total weight (ratio is without 1)
+y=results_pine3$Fall_cold_injury_rhoave_BAYENV
+par(mar=c(4,4,1,1))
+plot_2D.b(x,y,xlab="Total weight", ylab="FCI", 
+                      xlim=c(-0.3,0.3), 
+                      ylim=c(-0.3,0.3), 
+                      nbin=100, 
+                      x_sub=x[Group2_logical], 
+                      y_sub=y[Group2_logical],
+                      x_sub_blue=x[Group3_logical], 
+                      y_sub_blue=y[Group3_logical],
+                      PE=-1)
+
+# other outliers that aren't in the two groups
+plot_2D.b(x,y,xlab="Total Weight", ylab="FCI", 
+                      xlim=c(-0.3,0.3), 
+                      ylim=c(-0.3,0.3), 
+                      nbin=100, 
+                      x_sub=x[Group1_logical & !Group2_logical & !Group3_logical], 
+                      y_sub=y[Group1_logical & !Group2_logical & !Group3_logical],
+                      PE=-1)
+
+x=results_pine3$root_wt_shoot_wt_p_1_raw_rho 
+y=results_pine3$Fall_cold_injury_p_raw_rho
+plot_2D.b(x,y,xlab="Total weight", ylab="FCI", 
+                      xlim=c(-1,1), 
+                      ylim=c(-1,1), 
+                      nbin=100, 
+                      x_sub=x[Group2_logical], 
+                      y_sub=y[Group2_logical],
+                      x_sub_blue=x[Group3_logical], 
+                      y_sub_blue=y[Group3_logical],
+                      PE=-1)
+plot_2D.b(x,y,xlab="Total weight", ylab="FCI", 
+                      xlim=c(-1,1), 
+                      ylim=c(-1,1), 
+                      nbin=100, 
+                      x_sub=x[Group1_logical & !Group2_logical & !Group3_logical], 
+                      y_sub=y[Group1_logical & !Group2_logical & !Group3_logical], 
+                      PE=-1)
+```
+
+
+### Make outlier plots - one for each candidate gene
+
+```{r, eval=FALSE, fig.width=12}
+ ### Loop through top genes but for subset of envi
+  for (i in 1:length(topcan)){
+    magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
+    blueLogical <- results_pine3$gtcontig==topcan[i] & !Group1_logical #other SNPs in the gene
+    nameBay <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "BayenvSub.pdf", sep="_")
+    nameRaw <- paste(round(G1_df$prop[G1_df$contig==topcan[i]],2),
+                     G1_df$numOutSnps[G1_df$contig==topcan[i]], 
+                     G1_df$numTotSnps[G1_df$contig==topcan[i]],
+                     topcan[i], "RawSub.pdf", sep="_")
+    MakeOutlierPlot(nameBay, magLogical, type="Bayenv", Blue_logical = blueLogical,envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12)
+    MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1), envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12)
+    print(c("done with", i, "of", length(topcan)))
+  } #end for loop
+
+
+
+```
+
+
+
+### Make a table for annotations
+```{r}
+head(G1_df)
+nrow(G1_df)
+G1_df$TempGroup <- G1_df$contig %in% Group2_allSuperSNPs_array_names
+G1_df$PrecipGroup <- G1_df$contig %in% Group3_allSuperSNPs_array_names
+G1_df$BothTempPrecip <- G1_df$PrecipGroup & G1_df$TempGroup
+G1_df$SpruceOrthoOut <- G1_df$contig %in% results_pine3$gtcontig[results_pine3$pine_super_convergent]
+G1_df
+```
+
+```{r, eval=FALSE}
+write.table(G1_df, "../PineTopCandidates.txt", col.names=TRUE, row.names=FALSE)
+G1_df
+
+### save outlier status
+save(Group1_logical,Group2_logical,Group3_logical, file = "../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_TOPCANIDATE_logicals.Rdata")
+```
 ### Overview:
 - took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
 - reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
