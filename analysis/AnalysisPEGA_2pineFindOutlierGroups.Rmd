@@ -453,7 +453,7 @@ Group2cols.superdf <- colnames(is.superdf) %in% c(
   Group2_allSuperSNPs_array <- sapply(Group2_allSuperSNPs_array_names, getInd2, Group2_allSuperSNPs)
   length(Group2_allSuperSNPs_array)
   #snps per contig
-  data.frame(contig=Group2_allSuperSNPs_array_names,
+  Group2_df <- data.frame(contig=Group2_allSuperSNPs_array_names,
              numOutSnps=as.numeric(sapply(Group2_allSuperSNPs_array, length)))
 ```
 
@@ -546,7 +546,7 @@ hist(null2)  # has a narrow distribution
   Group3_allSuperSNPs_array <- sapply(Group3_allSuperSNPs_array_names, getInd2, Group3_allSuperSNPs)
   length(Group3_allSuperSNPs_array)
   #snps per contig
-  data.frame(contig=Group3_allSuperSNPs_array_names,
+  Group3_df <- data.frame(contig=Group3_allSuperSNPs_array_names,
              numOutSnps=as.numeric(sapply(Group3_allSuperSNPs_array, length)))
   #34 contigs
 ```
@@ -667,7 +667,25 @@ G1_df$TempGroup <- G1_df$contig %in% Group2_allSuperSNPs_array_names
 G1_df$PrecipGroup <- G1_df$contig %in% Group3_allSuperSNPs_array_names
 G1_df$BothTempPrecip <- G1_df$PrecipGroup & G1_df$TempGroup
 G1_df$SpruceOrthoOut <- G1_df$contig %in% results_pine3$gtcontig[results_pine3$pine_super_convergent]
-G1_df
+
+G1_df <- G1_df[order(G1_df$contig),]
+
+## Add # outliers to temp group
+G1_df$NumTempOut <- 0
+G1_df$NumTempOut[G1_df$TempGroup] <- Group2_df$numOutSnps[order(Group2_df$contig)]
+G1_df[G1_df$TempGroup,] # check that this matched Group2_df
+
+## Add # outliers to precip group
+G1_df$NumPrecipOut <- 0
+G1_df$NumPrecipOut[G1_df$PrecipGroup] <- Group3_df$numOutSnps[order(Group3_df$contig)]
+G1_df[G1_df$PrecipGroup,] # check that this matched Group3_df
+
+### Both groups
+G1_df[G1_df$BothTempPrecip,]
+
+### Run a unit test check that outliers add up
+### They might not add up perfectly if there is an outlier SNP in a variable not considered in group 2 or group 3, or if one SNP is in both groups
+cbind(G1_df$numOutSnps, G1_df$NumTempOut + G1_df$NumPrecipOut)
 ```
 
 ```{r, eval=FALSE}
@@ -677,6 +695,27 @@ G1_df
 ### save outlier status
 save(Group1_logical,Group2_logical,Group3_logical, file = "../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_TOPCANIDATE_logicals.Rdata")
 ```
+
+### Merge G1_df with Kay's annotations
+```{r}
+go <- read.table("../GOanalysis/tair_pine_katie2", header=TRUE)
+names(go)
+names(G1_df)
+names(go)[1] <- "contig2"
+head(go$contig2)
+head(G1_df$contig)
+### Remove seq1, but check in all rows first
+length(grep("_seq1", G1_df$contig))==nrow(G1_df)
+
+G1_df$contig2 <- sub("_seq1", "", G1_df$contig)
+G1_df_go <- merge(G1_df, go, all=TRUE)
+head(G1_df_go, 1)
+tail(G1_df_go, 1)
+nrow(G1_df_go) # should equal 107
+write.table(G1_df_go, "../PineTopCandidates_WithGO.txt", col.names=TRUE, row.names=FALSE)
+```
+
+
 ### Overview:
 - took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
 - reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
