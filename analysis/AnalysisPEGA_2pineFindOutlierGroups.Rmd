@@ -420,33 +420,18 @@ MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw2.pdf", Group2_logical, type="Raw",
   nrow(Group3_allSuperSNPs)
   sum(Group3_logical)
 
-  ### Group3 array for boostrap covariance
+  ### Group3 array contigs
   Group3_allSuperSNPs_array_names <- unique(Group3_allSuperSNPs$gtcontig)
   Group3_allSuperSNPs_array <- sapply(Group3_allSuperSNPs_array_names, getInd2, Group3_allSuperSNPs)
   length(Group3_allSuperSNPs_array)
+    # number of contigs in Group 3
+  
   #snps per contig
   Group3_df <- data.frame(contig=Group3_allSuperSNPs_array_names,
              numOutSnps=as.numeric(sapply(Group3_allSuperSNPs_array, length)))
   #34 contigs
-```
-
-### Plot Group 3 RAW CMD/MAP
-```{r,eval=FALSE}
-#comp1565_c0_seq1         24
-#comp2237_c0_seq1          9
-#comp9553_c0_seq1          8
-
-MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoBayenv1.pdf", Group3_logical , type="Bayenv", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24,
-    Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
-    Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
-    Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1") 
-
-
-MakeOutlierPlot("Group3_MAP_CMD_EnvByPhenoRaw1.pdf", Group3_logical, type="Raw", envi_ind = envi_ind, pheno_ind=pheno_ind, width=20, height=24, xlim=c(-1,1), ylim=c(-1,1),
-    Blue_logical=Group3_logical & results_pine3$gtcontig=="comp1565_c0_seq1",
-    Green_logical= Group3_logical & results_pine3$gtcontig=="comp2237_c0_seq1",
-    Golden_logical=Group3_logical & results_pine3$gtcontig=="comp9553_c0_seq1")
-
+  
+  
 ```
 
 
@@ -513,8 +498,10 @@ plot_2D.b(x,y,xlab="Total weight", ylab="FCI",
 
 
 ### Make outlier plots - one for each candidate gene
-
+This takes a while. To run this code, set MakeThesePlots <- TRUE below
 ```{r, eval=FALSE, fig.width=12}
+MakeThesePlots <- FALSE
+if(MakeThesePlots){
  ### Loop through top genes but for subset of envi
   for (i in 1:length(topcan)){
     magLogical <- results_pine3$gtcontig==topcan[i] & Group1_logical #outlier SNPs
@@ -531,41 +518,9 @@ plot_2D.b(x,y,xlab="Total weight", ylab="FCI",
     MakeOutlierPlot(nameRaw, magLogical, type="Raw", Blue_logical = blueLogical, xlim=c(-1,1), ylim=c(-1,1), envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12)
     print(c("done with", i, "of", length(topcan)))
   } #end for loop
-
-
-
+}# end if
 ```
 
-
-
-### Make a table for annotations
-```{r}
-head(G1_df)
-nrow(G1_df)
-G1_df$TempGroup <- G1_df$contig %in% Group2_allSuperSNPs_array_names
-G1_df$PrecipGroup <- G1_df$contig %in% Group3_allSuperSNPs_array_names
-G1_df$BothTempPrecip <- G1_df$PrecipGroup & G1_df$TempGroup
-G1_df$SpruceOrthoOut <- G1_df$contig %in% results_pine3$gtcontig[results_pine3$pine_super_convergent]
-
-G1_df <- G1_df[order(G1_df$contig),]
-
-## Add # outliers to temp group
-G1_df$NumTempOut <- 0
-G1_df$NumTempOut[G1_df$TempGroup] <- Group2_df$numOutSnps[order(Group2_df$contig)]
-G1_df[G1_df$TempGroup,] # check that this matched Group2_df
-
-## Add # outliers to precip group
-G1_df$NumPrecipOut <- 0
-G1_df$NumPrecipOut[G1_df$PrecipGroup] <- Group3_df$numOutSnps[order(Group3_df$contig)]
-G1_df[G1_df$PrecipGroup,] # check that this matched Group3_df
-
-### Both groups
-G1_df[G1_df$BothTempPrecip,]
-
-### Run a unit test check that outliers add up
-### They might not add up perfectly if there is an outlier SNP in a variable not considered in group 2 or group 3, or if one SNP is in both groups
-cbind(G1_df$numOutSnps, G1_df$NumTempOut + G1_df$NumPrecipOut)
-```
 
 ```{r, eval=FALSE}
 write.table(G1_df, "../PineTopCandidates.txt", col.names=TRUE, row.names=FALSE)
