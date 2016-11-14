@@ -6,6 +6,7 @@ output: html_document
 ---
 
 ### Explore linear models for height and CI traits
+setwd("analysis")
 ```{r}
 #install.packages("rgl")
 library(rgl)

@@ -6,74 +6,26 @@ output: html_document
 ---
 
 ### Load data
-
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysis/")
 ```{r, label="load data"}
 load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
-#this loads PE, results_pine3, gcontig_array, gcontig_array_names, PE_matchGWAS,PE_matchGEA
-
-
   #if(!("ash" %in% installed.packages())){install.packages("ash")}
   require(ash)
   require(fields)
 ```
+This loads:
 
-
-### Plotting function plot_2D.a 
-plot_2D.a flips the phenotype axis
-
-```{r}
-plot_2D.a <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, PE=1){
-  if(PE<0){x <- -x; x_sub <- -x_sub}
-
-  data1 <- cbind(x, y)
-  data1b <- data1[complete.cases(data1),]
-  if(length(xlim)==0){
-    xlim_up <- max(x, na.rm=TRUE)+0.15*max(x, na.rm=TRUE)
-    xlim_lower <- min(x, na.rm=TRUE)-0.15*max(x, na.rm=TRUE)
-  }else{
-    xlim_lower <- xlim[1]; xlim_up <- xlim[2]
-  }
-  if(length(ylim)==0){
-    ylim_up <- max(y, na.rm=TRUE)+0.15*max(y, na.rm=TRUE)
-    ylim_lower <- min(y, na.rm=TRUE)-0.15*max(y, na.rm=TRUE)
-  }else{
-    ylim_lower <- ylim[1]; ylim_up <- ylim[2]
-  }
-        binned <- bin2(data1b,
-                 matrix(c(xlim_lower,xlim_up,ylim_lower,ylim_up), 2,2, byrow=TRUE),
-                 nbin=c(nbin,nbin))
-    binned$nc[binned$nc==0]=NA
-    image(seq(xlim_lower,xlim_up,length.out = nbin), 
-               seq(ylim_lower,ylim_up, length.out=nbin),
-               binned$nc,
-             xlab=xlab, ylab=ylab, add=FALSE, 
-             col=grey.colors(75, 0.25,0.9),
-             xaxt="n", yaxt="n", bty="n")
-    points(x_sub, y_sub, pch=24, cex=1, col="magenta", bg="orange")
-    
-    lines(c(-100,100), c(0,0), col="grey") #add x axis
-    lines(c(0,0), c(-100,100), col="grey") # add y axis
-    if (abs(PE)>0.1){
-      abline(lm(y~x), lwd=2)
-      m <- lm(y_sub~x_sub)
-      if(summary(m)$coef[2,4] < 1e-01){abline(m, col="orange", lwd=2)}
-      }
-    text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="grey")
-    text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="grey")
-    if(PE>0){
-      text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="grey"); text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="grey")
-    }
-    if(PE<0){
-       text(xlim_up*0.95,ylim_up*0.05,"-", cex=2, col="grey"); text(xlim_lower*0.95,ylim_up*0.05,"+", cex=2, col="grey")   
-    }
-    text(xlim_up*0.75,ylim_lower*0.95, paste("PE =", PE), cex=1.2)
-} # end plot_2D.a
-```
+* PE
+* results_pine3
+* gcontig_array 
+* gcontig_array_names
+* PE_matchGWAS
+* PE_matchGEA
 
 ### Plotting function plot_2D.b
 plot_2D.b does not flip the phenotype axis.  Instead it colors the quadrant for the expected direction based on the PE association
 ```{r}
-plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL, y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
+plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL,  y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
   #if(PE<0){x <- -x; x_sub <- -x_sub}
 
   data1 <- cbind(x, y)
@@ -715,6 +667,15 @@ nrow(G1_df_go) # should equal 107
 write.table(G1_df_go, "../PineTopCandidates_WithGO.txt", col.names=TRUE, row.names=FALSE)
 ```
 
+```{r, label="Plot MAT vs MAP"}
+ff <- read.table ("../data/MAT06-BLUEs&Climate-pine.csv", sep = ",", header = T)
+head(ff)
+PE_MAT_MAP = cor(ff$MAT, ff$log.MAP.,use = "pairwise.complete.obs")
+par(mar=c(4,4,1,1))
+plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, PE = round(PE_MAT_MAP,2))
+
+plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, x_sub=results_pine3$MAT_rhoave[Group2_logical], y_sub=results_pine3$MAP_rhoave[Group2_logical], x_sub_blue = results_pine3$MAT_rhoave[Group3_logical], y_sub_blue=results_pine3$MAP_rhoave[Group3_logical], PE = round(PE_MAT_MAP,2))
+```
 
 ### Overview:
 - took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level

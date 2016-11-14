@@ -6,3 +6,8 @@ analysis/figure*
 analysis/*.pdf
 figures*
 analysis/old*
+large*/*
+.Rhistory 
+*.docx
+*.key
+
