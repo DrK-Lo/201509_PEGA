@@ -1,0 +1,79 @@
+---
+title: "AnalysisPEGA_3pineAssessSignificance"
+author: "Katie Lotterhos"
+date: "11/14/2016"
+output: html_document
+---
+
+### Covariance based on random sample of 1 SNP from each gcontig
+
+I realized that I need a second function to calculate covariance based on SNP sampled from independent gtcontigs that match MAF to an observed sample.
+
+```{r}
+  getInd2 <- function(gtcontig, dataframe){
+    return(which(dataframe$gtcontig %in% gtcontig))
+  }
+
+length(gtcontig_array_names)
+
+getOneIndexEach_gtcontig_Cov <- function(array, array_names, value1, value2,  num, logicvect=NULL){
+  ## each index in array is a gtcontig and holds the indexes of SNPs that can be sampled, 
+  ## array_names is a vector of the gtcontig name
+  ## value1 and value2 are vectors of values with length (nrow(unlist(array))) to calculate the covariance between
+  ## num is the number of gtcontigs to draw from the data
+  ## logicvect is a vector of T/F with length(array_names)
+  ## indicating whether or not to sample that gtcontig
+  ind <- 1:length(array_names)
+  ## the following code returns the gtcontigs to sample from gtcontig_array
+  if(length(logicvect)==0){
+      array_ind <- sample(ind, num, replace=FALSE)
+    }else{
+      array_ind <- sample(ind, num, replace=FALSE, prob=logicvect)
+    }
+  ## the following code returns the row indices in results_pine3 to sample values from
+  SNProws <- sapply(array_ind, function(i){sample(array[[i]], 1)})
+  return(cov(value1[SNProws], value2[SNProws]))
+}
+
+
+try1 <- replicate(1000, getOneIndexEach_gtcontig_Cov(gtcontig_array, gtcontig_array_names, results_pine3$LAT_rhoave, results_pine3$Fall_cold_injury_rhoave_BAYENV,  219, logicvect=NULL))
+hist(try1)  # The association between LAT and FCI is negative?
+```
+
+
+
+### Group 1 ideas for testing
+
+```{r,eval=FALSE}
+### Compare null to observed covariance
+        ### Function to arrange for bootstrap covariance
+
+
+    try2 <- replicate(1000, getOneIndexEach_gtcontig_Cov(Group1_allSuperSNPs_array, Group1_allSuperSNPs_array_names, Group1_allSuperSNPs$LAT_rhoave, Group1_allSuperSNPs$Fall_cold_injury_rhoave_BAYENV, 219, logicvect=NULL))
+    
+    plot(density(try1*-1), col="black", lwd=2, xlim=c(0,0.005))
+    points(density(try2*-1), type="l", col="blue", lwd=2)
+
+    # Get 95% CI
+    Ho <- c(sort(try1)[25], sort(try1)[975])*-1  # null
+    H1 <- c(sort(try2)[25], sort(try2)[975])*-1 # super SNPs
+    H1[1] > Ho[2] #upper tail test
+    H1[2] < Ho[1] #lower tail test
+```
+
+
+### Group 2 some ideas for null testing
+```{r, eval=FALSE}
+cond <- Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1"
+condnull <- !Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1" 
+obs <- cov(results_pine3$Fall_cold_injury_p_raw_rho[cond],results_pine3$LAT_raw_rho[cond])
+null1 <- replicate(1000, cov(sample(results_pine3$Fall_cold_injury_p_raw_rho[cond]),sample(results_pine3$LAT_raw_rho[cond])))
+hist(null1) # this is centered on 0 but has a wider distribution
+getnull <- function(){                   
+  n <- sample(which(condnull), size=49, replace=TRUE) 
+  cov(results_pine3$Fall_cold_injury_p_raw_rho[n], results_pine3$LAT_raw_rho[n], use="complete.obs")
+}
+null2 <- replicate(1000, getnull() )
+hist(null2)  # has a narrow distribution
+```
+

@@ -17,8 +17,8 @@ This loads:
 
 * PE
 * results_pine3
-* gcontig_array 
-* gcontig_array_names
+* gtcontig_array 
+* gtcontig_array_names
 * PE_matchGWAS
 * PE_matchGEA
 
@@ -156,7 +156,7 @@ MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(
     # pecorr = get PE
       pecorr <- PE$pine_correlation[(PE$Environment==PE_matchGEA$Environment_PE[PE_matchGEA$Environment_GEA == xorder[i]]) & PE$PhenAbb==yorder[j]]
       
-      # make plot2D.a
+      # make plot2D
       plot_2D.b(x,y, 
          xlab= "", xlim=xlim,
          ylab= "" , ylim=ylim,
@@ -179,43 +179,6 @@ MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(
   dev.off()
 
 }# end function
-```
-
-
-### Covariance based on random sample of 1 SNP from each gcontig
-
-I realized that I need a second function to calculate covariance based on SNP sampled from independent gtcontigs that match MAF to an observed sample.
-
-```{r}
-  getInd2 <- function(gtcontig, dataframe){
-    return(which(dataframe$gtcontig %in% gtcontig))
-  }
-
-length(gtcontig_array_names)
-
-getOneIndexEach_gtcontig_Cov <- function(array, array_names, value1, value2,  num, logicvect=NULL){
-  ## each index in array is a gtcontig and holds the indexes of SNPs
-    ## that can be sampled, array_names is the gtcontig name
-  ## value1 and value2 are vectors of values with length (nrow(unlist(array))) to calculate the covariance between
-  ## num is the number of gtcontigs to draw from the data
-  ## logicvect is a vector of T/F with length(array_names)
-  ## indicating whether or not to sample that gtcontig
-  ind <- 1:length(array_names)
-  ## the following code returns the gtcontigs to sample from gtcontig_array
-  if(length(logicvect)==0){
-      array_ind <- sample(ind, num, replace=FALSE)
-    }else{
-      array_ind <- sample(ind, num, replace=FALSE, prob=logicvect)
-    }
-  ## the following code returns the row indices in results_pine3 to sample values from
-  SNProws <- sapply(array_ind, function(i){sample(array[[i]], 1)})
-  return(cov(value1[SNProws], value2[SNProws]))
-}
-
-
-try1 <- replicate(1000, getOneIndexEach_gtcontig_Cov(gtcontig_array, gtcontig_array_names, results_pine3$LAT_rhoave, results_pine3$Fall_cold_injury_rhoave_BAYENV,  219, logicvect=NULL))
-hist(try1*-1)  # negative PE association
-
 ```
 
 ### Group 1: Top SNP's from Sam's top candidates
@@ -250,73 +213,60 @@ hist(try1*-1)  # negative PE association
   Group1_logical <- results_pine3$gcontig__gcontig_pos %in% Group1_allSuperSNPs$gcontig__gcontig_pos
 
 
-  ### Group 1 array for boostrap covariancepng(file = "GroupEnvByPheno.png",width=50,height=66, unit="in", res=300)
+  ### Group 1 array
+  #png(file = "GroupEnvByPheno.png",width=50,height=66, unit="in", res=300)
   Group1_allSuperSNPs_array_names <- unique(Group1_allSuperSNPs$gtcontig)
   Group1_allSuperSNPs_array <- sapply(Group1_allSuperSNPs_array_names, getInd2, Group1_allSuperSNPs)
-    #snps per contig
+  
+    ### snps per contig in top candidates
   G1_df <- data.frame(contig=Group1_allSuperSNPs_array_names,
              numOutSnps=as.numeric(sapply(Group1_allSuperSNPs_array, length)))
-  
   dim(G1_df)
-  head(G1_df)
-
-  ### Top candidates
-  G1_df <- G1_df[order(G1_df$numOutSnps),]
-  G1_df[G1_df$numOutSnps>2,]
+  G1_df <- G1_df[order(G1_df$numOutSnps, decreasing = TRUE),]
+  G1_df$rank_numOut <- rank(1/G1_df$numOutSnps) 
+    # index shows order by number of SNPs - contig with most outlier SNPs # 1
   G1_df$numTotSnps <- sapply(1:nrow(G1_df), function(i){sum(results_pine3$gtcontig==G1_df$contig[i])})
-  G1_df
   G1_df$prop <- G1_df$numOutSnps/G1_df$numTotSnps
-  G1_df <- G1_df[order(G1_df$prop),]
-  head(G1_df,50)
-  tail(G1_df,60)
+    # proportion of outlier SNPs in that contig
+  
+  ### Print top candidate list to html file, ordered by the contigs with the higest proportion of outliers SNPS
+  G1_df$rank_prop <- rank(1/G1_df$prop)
+  G1_df[order(G1_df$prop, decreasing=TRUE),]
 
-  topcan <- as.character(G1_df$contig[G1_df$prop>0.05])
-  length(topcan)
-  ## Which ones are super convergent outliers
+   #topcan <- as.character(G1_df$contig[G1_df$prop>0.05])
+   #length(topcan)
+  
+  ### Which ones are super convergent outliers
   results_pine3$gtcontig[Group1_logical & results_pine3$pine_super_convergent]
 
-  #results_pine3$X_annotation[Group1_logical]
-
-  ### Annotations on tope genes
-  for (i in 1:length(topcan)){
-    print(topcan[i])
-    numout <- G1_df$numOutSnps[G1_df$contig==topcan[i]]
-    print(c("Num Outliers:", numout))
-    print(c("NumSNPs:", sum(results_pine3$gtcontig==topcan[i])))
-    print(as.character(results_pine3$X_annotation[results_pine3$gtcontig==topcan[i] & Group1_logical]))
-  } #end for loop
-### Contig    	Number outlier SNPs in LAT/DD0
-### comp60064_c0_seq1         46
-### comp1563_c0_seq1         19
-### comp73926_c0_seq1         13
-
-### Contig      Number outlier SNPs in MAP/CMD
-#comp1565_c0_seq1         24
-#comp2237_c0_seq1          9
-#comp9553_c0_seq1          8
+  names(results_pine3)
+  results_pine3$Group1_logical <- Group1_logical
 ```
 
-### Group 1 ideas for testing
-
-```{r,eval=FALSE}
-### Compare null to observed covariance
-        ### Function to arrange for bootstrap covariance
-
-
-    try2 <- replicate(1000, getOneIndexEach_gtcontig_Cov(Group1_allSuperSNPs_array, Group1_allSuperSNPs_array_names, Group1_allSuperSNPs$LAT_rhoave, Group1_allSuperSNPs$Fall_cold_injury_rhoave_BAYENV, 219, logicvect=NULL))
-    
-    plot(density(try1*-1), col="black", lwd=2, xlim=c(0,0.005))
-    points(density(try2*-1), type="l", col="blue", lwd=2)
-
-    # Get 95% CI
-    Ho <- c(sort(try1)[25], sort(try1)[975])*-1  # null
-    H1 <- c(sort(try2)[25], sort(try2)[975])*-1 # super SNPs
-    H1[1] > Ho[2] #upper tail test
-    H1[2] < Ho[1] #lower tail test
-```
 
 ### Group 1 Make some comparison plots
 ```{r}
+
+names(results_pine3)[grep("MAT", names(results_pine3))]
+
+plot_2D.b(x=results_pine3$MAT_rhoave,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "MAT rho Bayenv", 
+       ylab= "MAP rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub=results_pine3$MAT_rhoave[Group1_logical], 
+       y_sub=results_pine3$MAP_rhoave[Group1_logical],
+       PE=1)
+
+plot_2D.b(x=results_pine3$MAT_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "MAT rho raw", 
+       ylab= "MAP rho raw" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub=results_pine3$MAT_raw_rho[Group1_logical], 
+       y_sub=results_pine3$MAP_raw_rho[Group1_logical],
+       PE=1)
+
 plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$LAT_rhoave, 
        xlab= "FCI rho Bayenv", 
@@ -390,7 +340,6 @@ Group2cols.superdf <- colnames(is.superdf) %in% c(
                                           "LAT_raw_rho",
                                           "DD_0_raw_rho")
 
-
  ### Dataframe of Group 2
   Group2_allSuperSNPs <- superdf[rowSums(is.superdf[,Group2cols.superdf],na.rm = TRUE)>0,]
   
@@ -404,51 +353,44 @@ Group2cols.superdf <- colnames(is.superdf) %in% c(
   Group2_allSuperSNPs_array_names <- unique(Group2_allSuperSNPs$gtcontig)
   Group2_allSuperSNPs_array <- sapply(Group2_allSuperSNPs_array_names, getInd2, Group2_allSuperSNPs)
   length(Group2_allSuperSNPs_array)
+  
   #snps per contig
   Group2_df <- data.frame(contig=Group2_allSuperSNPs_array_names,
              numOutSnps=as.numeric(sapply(Group2_allSuperSNPs_array, length)))
+  dim(Group2_df)
+  Group2_df$rank_numOut <- rank(1/Group2_df$numOutSnps)
+    # index shows order by number of SNPs - contig with most outlier SNPs # 1
+  Group2_df$numTotSnps <- sapply(1:nrow(Group2_df), function(i){sum(results_pine3$gtcontig==Group2_df$contig[i])})
+  Group2_df$prop <- Group2_df$numOutSnps/Group2_df$numTotSnps
+    # proportion of outlier SNPs in that contig
+  
+  ### Print top candidate list to html file, ordered by the contigs with the higest proportion of outliers SNPS
+  Group2_df$rank_prop <- rank(1/Group2_df$prop)
+  Group2_df[order(Group2_df$prop, decreasing=TRUE),]
+  
+  ### Add column to results_pine3
+  results_pine3$Group2_logical <- Group2_logical
 ```
 
-### Plot Group 2 - F/WCI and TEMP
-```{r}
-      plot_2D.b(results_pine3$Fall_cold_injury_p_raw_rho,
-                results_pine3$LAT_raw_rho, 
-         xlab= "", xlim=c(-1,1),
-         ylab= "" , ylim=c(-1,1),
-         nbin=100, 
-         x_sub=results_pine3$Fall_cold_injury_p_raw_rho[Group2_logical], 
-         y_sub=results_pine3$LAT_raw_rho[Group2_logical],
-         PE=-0.42)
 
- plot_2D.b(results_pine3$Fall_cold_injury_rhoave_BAYENV,
-                results_pine3$LAT_rhoave, 
-         xlab= "", xlim=c(-0.3,0.3),
-         ylab= "" , ylim=c(-0.3,0.3),
-         nbin=100, 
-         x_sub=results_pine3$Fall_cold_injury_rhoave_BAYENV[Group2_logical], 
-         y_sub=results_pine3$LAT_rhoave[Group2_logical],
-         PE=-0.42)
-
-### Contig  		Number outlier SNPs
-### comp60064_c0_seq1         46
-### comp1563_c0_seq1         19
-### comp73926_c0_seq1         13
-```
-
-### Designate small groups
+### Designate small groups of focus variables
 ```{r}
 xorder
 envi_ind=c(2, 5, 6, 9, 10, 11, 12, 13, 17)
 xorder[envi_ind]
+
 yorder
-pheno_ind=c(1,2,7,16,17)
+pheno_ind=c(1,15, 16,17)
 yorder[pheno_ind]
+
 envi_ind_sm <- c(2,9,10)
 xorder[envi_ind_sm]
+
 pheno_ind_sm <- c(1,16)
 yorder[pheno_ind_sm]
 
-sum(Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1") #should equal 46
+sum(Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1") 
+#should equal 46
 ```
 
 ```{r, eval=FALSE}
@@ -464,21 +406,6 @@ MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw2.pdf", Group2_logical, type="Raw",
     Golden_logical=Group2_logical & results_pine3$gtcontig=="comp73926_c0_seq1")
 ```
 
-
-### Group 2 some ideas for null testing
-```{r, eval=FALSE}
-cond <- Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1"
-condnull <- !Group2_logical & results_pine3$gtcontig=="comp60064_c0_seq1" 
-obs <- cov(results_pine3$Fall_cold_injury_p_raw_rho[cond],results_pine3$LAT_raw_rho[cond])
-null1 <- replicate(1000, cov(sample(results_pine3$Fall_cold_injury_p_raw_rho[cond]),sample(results_pine3$LAT_raw_rho[cond])))
-hist(null1) # this is centered on 0 but has a wider distribution
-getnull <- function(){                   
-  n <- sample(which(condnull), size=49, replace=TRUE) 
-  cov(results_pine3$Fall_cold_injury_p_raw_rho[n], results_pine3$LAT_raw_rho[n], use="complete.obs")
-}
-null2 <- replicate(1000, getnull() )
-hist(null2)  # has a narrow distribution
-```
 
 ### Group 3 CMD/MAP RAW outliers
 ```{r}
