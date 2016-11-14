@@ -256,7 +256,7 @@ plot_2D.b(x=results_pine3$MAT_rhoave,
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
        x_sub=results_pine3$MAT_rhoave[Group1_logical], 
        y_sub=results_pine3$MAP_rhoave[Group1_logical],
-       PE=1)
+       PE=0.33)
 
 plot_2D.b(x=results_pine3$MAT_raw_rho,
        y=results_pine3$MAP_raw_rho, 
@@ -265,7 +265,7 @@ plot_2D.b(x=results_pine3$MAT_raw_rho,
        nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
        x_sub=results_pine3$MAT_raw_rho[Group1_logical], 
        y_sub=results_pine3$MAP_raw_rho[Group1_logical],
-       PE=1)
+       PE=0.33)
 
 plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$LAT_rhoave, 
@@ -431,6 +431,19 @@ MakeOutlierPlot("Group2_Lat_DD0_EnvByPhenoRaw2.pdf", Group2_logical, type="Raw",
              numOutSnps=as.numeric(sapply(Group3_allSuperSNPs_array, length)))
   #34 contigs
   
+  dim(Group3_df)
+  Group3_df$rank_numOut <- rank(1/Group3_df$numOutSnps)
+    # index shows order by number of SNPs - contig with most outlier SNPs # 1
+  Group3_df$numTotSnps <- sapply(1:nrow(Group3_df), function(i){sum(results_pine3$gtcontig==Group3_df$contig[i])})
+  Group3_df$prop <- Group3_df$numOutSnps/Group3_df$numTotSnps
+    # proportion of outlier SNPs in that contig
+  
+  ### Print top candidate list to html file, ordered by the contigs with the higest proportion of outliers SNPS
+  Group3_df$rank_prop <- rank(1/Group3_df$prop)
+  Group3_df[order(Group3_df$prop, decreasing=TRUE),]
+  
+  ### Add column to results_pine3
+  results_pine3$Group3_logical <- Group3_logical
   
 ```
 
@@ -526,8 +539,7 @@ if(MakeThesePlots){
 write.table(G1_df, "../PineTopCandidates.txt", col.names=TRUE, row.names=FALSE)
 G1_df
 
-### save outlier status
-save(Group1_logical,Group2_logical,Group3_logical, file = "../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_TOPCANIDATE_logicals.Rdata")
+### 
 ```
 
 ### Merge G1_df with Kay's annotations
@@ -538,7 +550,7 @@ names(G1_df)
 names(go)[1] <- "contig2"
 head(go$contig2)
 head(G1_df$contig)
-### Remove seq1, but check in all rows first
+### Remove seq1, but check "seq1" in all rows first
 length(grep("_seq1", G1_df$contig))==nrow(G1_df)
 
 G1_df$contig2 <- sub("_seq1", "", G1_df$contig)
@@ -554,22 +566,19 @@ ff <- read.table ("../data/MAT06-BLUEs&Climate-pine.csv", sep = ",", header = T)
 head(ff)
 PE_MAT_MAP = cor(ff$MAT, ff$log.MAP.,use = "pairwise.complete.obs")
 par(mar=c(4,4,1,1))
-plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, PE = round(PE_MAT_MAP,2))
-
 plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, x_sub=results_pine3$MAT_rhoave[Group2_logical], y_sub=results_pine3$MAP_rhoave[Group2_logical], x_sub_blue = results_pine3$MAT_rhoave[Group3_logical], y_sub_blue=results_pine3$MAP_rhoave[Group3_logical], PE = round(PE_MAT_MAP,2))
 ```
 
-### Overview:
+### Save .Rdata for further analysis
+```{r}
+save.image(file="../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_OutputPEGA_2FindOutlierGroups.RData")
+```
+
+### Summary of what was done:
 - took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
 - reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
 - I noticed two groups of behavior.  Chose variables that had strongest PE associations.
   - Group temp: subset of Group 1 that are raw outliers in lat and DD0
   - Group moisture: subset of Group 1 that are raw outliers in MAP and CMD
 
-Red genes (LAT and DD0) Blue genes (MAP and CMD) in Bayenv2:
-* Both read and blue decrease FWCI with latitude and DD0 (true in raw)
-* Both decrease height and MGR with DD0 (true in raw)
-* Red decrease FWCI with elevation, while blue increase FWCI with elevation (true in raw for WCI in elevation)
-* Red increase FWSCI, MGR, height, and diam with MAP, while blue do the opposite (true for raw)
-* red increase FWCI, MCG, height, and diam with FFP, while blue do the opposite (in raw associations blue do nothing)
-* red and blue increase FWCI with CMD, and increase height and diam 
+Red genes (LAT and DD0) Blue genes (MAP and CMD) in Bayenv2
