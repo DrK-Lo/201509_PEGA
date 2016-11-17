@@ -12,6 +12,7 @@ load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
   #if(!("ash" %in% installed.packages())){install.packages("ash")}
   require(ash)
   require(fields)
+  require(dplyr)
 ```
 This loads:
 
@@ -534,7 +535,6 @@ if(MakeThesePlots){
 }# end if
 ```
 
-
 ```{r, eval=FALSE}
 write.table(G1_df, "../PineTopCandidates.txt", col.names=TRUE, row.names=FALSE)
 G1_df
@@ -569,16 +569,182 @@ par(mar=c(4,4,1,1))
 plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, x_sub=results_pine3$MAT_rhoave[Group2_logical], y_sub=results_pine3$MAP_rhoave[Group2_logical], x_sub_blue = results_pine3$MAT_rhoave[Group3_logical], y_sub_blue=results_pine3$MAP_rhoave[Group3_logical], PE = round(PE_MAT_MAP,2))
 ```
 
-### Save .Rdata for further analysis
+### Save .Rdata for further analysis (optional)
 ```{r}
-save.image(file="../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_OutputPEGA_2FindOutlierGroups.RData")
-```
+save=FALSE
+if (save==TRUE){
+  out <- "../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_OutputPEGA_2FindOutlierGroups.RData"
+  save.image(file=out)
+}
 
-### Summary of what was done:
+load=FALSE
+if (load==TRUE){
+  load(out)
+}
+```
+Note that saving the image in this way uses a lot of unneccesary hard drive space.
+
+### Summary of what was done so far:
 - took Sam's list of super outliers - genes that have more outlier snps than predicted by random based on raw or corrected correlations at p9 level
 - reduced list further to genes with SNPs in > 0.999 on raw rho (Group 1)
 - I noticed two groups of behavior.  Chose variables that had strongest PE associations.
-  - Group temp: subset of Group 1 that are raw outliers in lat and DD0
+  - Group temp: subset of Group 1 that are raw outliers in LAT and DD0
   - Group moisture: subset of Group 1 that are raw outliers in MAP and CMD
 
-Red genes (LAT and DD0) Blue genes (MAP and CMD) in Bayenv2
+### Next steps: assess significance
+- Compare: Group 2 vs. random match set; Group 3 vs. random match set; other super SNPs in Group 1 but not in groups 2 or 3.
+- Loop through pairs of variables
+
+Function ()
+  Loop over SNPs:
+  - make a focal df and a dummy df for all data
+  - Sample a SNP from the focal group and store
+  - Sample a matching SNP by allele frequency from the dataset and store
+  - reduce the focal df and dummy df by removing all SNPs in the gtcontig associated with     focal SNPs
+  End loop
+  return covariances for focal group and null group
+End function
+
+replicate or mapply function 1000 times
+calculate 95% quantiles
+paired t-test
+
+```{r}
+### Part 1: Get the right columns
+
+p.bob <- PE_matchGWAS$Phenotype_GWAS[match(yorder[pheno_ind], PE_matchGWAS$Abb)]
+  #because nothing was standardized, need to adjust names
+(p.bob1 <- gsub("__", "_", p.bob))
+(gpa2<- gsub("_p","",p.bob1))
+
+(phen_names <- yorder[pheno_ind])
+(pheno_bayenv_cols <- match(paste(gpa2, "_rhoave_BAYENV", sep=""), names(results_pine3)))
+(pheno_raw_cols <-  match(paste(p.bob1,"_raw_rho", sep=""), names(results_pine3)))
+## check
+phen_df <- data.frame(name=phen_names, 
+           bayenv_name=names(results_pine3)[pheno_bayenv_cols],
+           raw_name=names(results_pine3)[pheno_raw_cols],
+           bayenv_col=pheno_bayenv_cols,
+           raw_col=pheno_raw_cols)
+phen_df <- phen_df[c(3,2,4,1),] #reorder for analysis
+phen_df
+
+(env_names <- xorder[envi_ind])
+(env_bayenv_cols <- match( paste(xorder[envi_ind],"_rhoave", sep=""), names(results_pine3)))
+(env_raw_cols <-  match( paste(xorder[envi_ind],"_raw_rho", sep=""), names(results_pine3)))
+## unit test
+env_df <- data.frame(name=env_names, 
+                     bayenv_name=names(results_pine3)[env_bayenv_cols],
+                     raw_name=names(results_pine3)[env_raw_cols],
+                     bayenv_col=env_bayenv_cols,
+                     raw_col=env_raw_cols)
+env_df
+
+### final dataframe
+final_df <- rbind(phen_df, env_df)
+final_df
+
+MakeOutlierPlot_with_stat <- function(filename, Group_logical, whichvars,
+                                      #envi_ind=1:22, pheno_ind=c(1:3,5:17),
+                                      xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),  width=50, height=66, type="Bayenv", Green_logical=NULL, Blue_logical=NULL, Golden_logical=NULL){
+    #type = "Bayenv" or "Raw"
+  
+  pdf(file = filename,width=width,height=height)
+  par(mfrow=c(length(envi_ind),length(pheno_ind)), mar=c(2,2,0,0), oma=c(6,6,6,0))
+  
+  if(type=="Bayenv"){colz=final_df$bayenv_col}
+  if(type=="Raw"){colz=final_df$raw_col}
+  # test_set <- results_pine3$Group2_logical
+  info1 <- results_pine3[,c("minor_freq","gtcontig", "pos_gcontig")]
+  # head(info1)
+  
+  for (i in 1:(nrow(final_df)-1)){
+    for (j in (i+1):nrow(final_df)){
+        x1 <- results_pine3[,colz[i]]
+        y1 <- results_pine3[,colz[j]]
+        x1_test <- results_pine3[test_set,colz[i]]
+        y1_test <- results_pine3[test_set,colz[j]]
+        info1_test <- info[test_set,]
+        
+        ncontigs <- length(table(info_test$gtcontig))
+        
+        snp_mat <- matrix(NA, nrow= ncontigs, ncol=2)
+          # 1st column match SNP x
+          # 2nd column match SNP y
+
+      GetSampleCov <- function(){
+        info <- data.frame(info1, x1, y1)
+        info_test <- data.frame(info1_test, x1_test, y1_test)
+        # REASSIGNMENT HERE TO REMOVE ALL SNPS FROM THE 
+        # SAME CONTIG EVERY TIME A SNP IS CHOSEN FOR THE NEXT STEP
+        ### sample test SNPs
+        rand_test_set <- info_test %>% group_by(gtcontig) %>% sample_n(size = 1)
+        ### unit test
+        if(length(unique(info_test$gtcontig)) != nrow(rand_test_set)){
+          print("Error")
+          break
+        } #end if 
+        test_cov <- cov(rand_test_set$x1_test, rand_test_set$y1_test)
+        
+          #get matching SNPs
+        for (k in 1:nrow(rand_test_set)){
+          test_maf <- rand_test_set$minor_freq[k]
+          b <- info %>% filter((minor_freq < (test_maf+0.025)) & (minor_freq > test_maf-0.025)) %>% sample_n(size = 1)
+          snp_mat[k,] <- c(b$x1, b$y1)
+          # could update info here by removing columns with gtcontig in b
+          info <- info %>% filter(gtcontig!=b$gtcontig)
+            # this line of code slows down 2x
+        }
+          ### SLOW WAY
+          # match_logic <- (info$minor_freq < test_maf+0.025) &
+          #   (info$minor_freq > test_maf-0.025) 
+          #     #~50000 SNPs for minimum and 25,000 SNPs for maximum. think we're OK
+          #     # match within MAF 0.05 window centered on test SNP
+          # info_sub <- info[match_logic,]
+          # match_index <- sample(1:nrow(info_sub),1)
+          # snp_mat[k,] <- c(info_sub$x1[match_index], info_sub$y1[match_index])
+          # ind_to_remove <- which(info$gtcontig==info_sub[match_index,]$gtcontig)
+          # info <- info[-ind_to_remove,]
+        }
+
+        null_cov <- cov(snp_mat[,1], snp_mat[,2])
+        return(c(test_cov=test_cov, null_cov=null_cov))
+      }
+      
+      compare <-  data.frame(t(replicate(100, GetSampleCov())))
+        #~12 sec per 10 replicates
+        # 
+      plot(density(compare$test_cov))
+      points(density(compare$null_cov))
+      
+      quantile(compare$test_cov, 0.05)  
+      quantile(compare$null_cov, 0.95)
+      
+      t.test(compare$test_cov, compare$null_cov ,paired = TRUE)
+      
+      #TO DO RED AND BLUE GROUPS
+        
+      # make plot2D
+      plot_2D.b(x,y, 
+         xlab= "", xlim=xlim,
+         ylab= "" , ylim=ylim,
+         nbin=100, 
+         x_sub=x[Group_logical], 
+         y_sub=y[Group_logical],
+         PE=pecorr,
+         x_sub_green=x[Green_logical],
+         y_sub_green=y[Green_logical],
+         x_sub_blue=x[Blue_logical],
+         y_sub_blue=y[Blue_logical],
+         x_sub_golden=x[Golden_logical],
+         y_sub_golden=y[Golden_logical]
+         ) 
+      mtext(xorder[i], side=2)
+      mtext(yorder[j], side=1)
+    } #end j loop
+    print(i)
+    } #end i loop
+  dev.off()
+
+}# end function
+```
