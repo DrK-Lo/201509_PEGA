@@ -6,6 +6,13 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+
+## Dec 11, 2016
+
+
+## Nov 22, 2016
+I've made a lot of progress on plotting the last week, and have made a 4-panel comparison plot with corrected/uncorrected patterns between 2 variables, with significance plots based on randomizations.
+
 ## Nov 14, 2016
 A couple weeks ago I chatted with Kay and Sam about the analysis and the paper. Today I sent Kay some simulations that she can use to test the Berg and Coop method. The simulations are in the folder:
 "large effect simulations for Kay to test Berg and Coop"

@@ -13,6 +13,7 @@ load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
   require(ash)
   require(fields)
   require(dplyr)
+  require(cluster)
 ```
 This loads:
 
@@ -26,7 +27,7 @@ This loads:
 ### Plotting function plot_2D.b
 plot_2D.b does not flip the phenotype axis.  Instead it colors the quadrant for the expected direction based on the PE association
 ```{r}
-plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub, y_sub, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL,  y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
+plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub_orange=NULL, y_sub_orange=NULL, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL,  y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
   #if(PE<0){x <- -x; x_sub <- -x_sub}
 
   data1 <- cbind(x, y)
@@ -47,60 +48,74 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
                  matrix(c(xlim_lower,xlim_up,ylim_lower,ylim_up), 2,2, byrow=TRUE),
                  nbin=c(nbin,nbin))
     binned$nc[binned$nc==0]=NA
-    image(seq(xlim_lower,xlim_up,length.out = nbin), 
-               seq(ylim_lower,ylim_up, length.out=nbin),
-               binned$nc,
-             xlab=xlab, ylab=ylab, add=FALSE, 
-             col=grey.colors(75, 0.25,0.9),
-             xaxt="n", yaxt="n", bty="n")
-    if(PE > 0.1){
+
+    ### Start plotting 
+    xlocs <- seq(xlim_lower,xlim_up,length.out = nbin)
+    ylocs <- seq(ylim_lower,ylim_up, length.out=nbin)
+    image(xlocs,  ylocs,
+               z=matrix(0, nrow=length(ylocs), ncol=length(xlocs)),
+          col=(rgb(0,0,0,0)),
+             xlab=xlab, ylab=ylab, add=FALSE, bty="n")#, 
+             #xaxt="n", yaxt="n", bty="n")
+    
+    if(PE >= 0.1){
       polygon(c(0,1,1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.1))
       polygon(c(0,-1,-1,0,0), c(0,0,-1,-1,0), col=rgb(0,0,0,0.1))
       }
-    if(PE < -0.1){
-      polygon(c(0,-1,-1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.1))
-      polygon(c(0,1,1,0,0), c(0,0,-1,-1,0),col=rgb(0,0,0,0.1))
-      }
-    points(x_sub, y_sub, pch=24, cex=1, col="magenta", bg="orange")
+    if(PE <= -0.1){
+      polygon(c(0,-1,-1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.05))
+      polygon(c(0,1,1,0,0), c(0,0,-1,-1,0),col=rgb(0,0,0,0.05))
+    }
+    lines(c(-100,100), c(0,0), col="black") #add x axis
+    lines(c(0,0), c(-100,100), col="black") # add y axis
     
-    lines(c(-100,100), c(0,0), col="grey") #add x axis
-    lines(c(0,0), c(-100,100), col="grey") # add y axis
-    P <- 0.005 # cutoff for linear model significance
-    if (abs(PE)>0.1){
-      abline(lm(y~x), lwd=2)
-      if(length(x_sub)>5){
-        m <- lm(y_sub~x_sub)
-        if(summary(m)$coef[2,4] < P){abline(m, col="orange", lwd=2)}
-        }
-      }
-  
+    image(seq(xlim_lower,xlim_up,length.out = nbin), 
+               seq(ylim_lower,ylim_up, length.out=nbin),
+               binned$nc,
+             xlab=xlab, ylab=ylab, add=TRUE, 
+             col=grey.colors(75, 0.8,0.1))
+             #xaxt="l", yaxt="l", bty="n")
+    
+    ### Function for plotting covariance matrix
+    plot_mycov <- function(data1, CI = 0.95, color="black", ...){
+      # data1 is a data frame with x, y in columns
+      C.ls2 <- cov(data1)
+      m.ls2 <- colMeans(data1)
+      d2.95 <- qchisq(CI, df = 2)
+      lines(ellipsoidPoints(C.ls2, d2.95, loc=m.ls2), lwd=2, col=color, ...)
+    }
+    
+    ### Make cov plot for all data
+    plot_mycov(data1)
+    
+    ### Make function for plotting sub points
+    plot_mycov_sub <- function(x_sub, y_sub, pch, color){
+      if(length(x_sub)>0){
+      points(x_sub, y_sub, pch=24, cex=1, col="darkorange", bg="orange")
+      plot_mycov(data.frame(x_sub_orange, y_sub_orange), col="darkorange", lty=2)
+    }
+    }
+    
+    ### Make cov plot for x_sub_orange, y_sub_orange
+    
+    
     if(length(x_sub_green)>0){
-      points(x_sub_green, y_sub_green, pch=24, cex=1, col="darkgreen", bg="green")
-      if (abs(PE)>0.1 & length(x_sub_green)>5){
-        m <- lm(y_sub_green~x_sub_green)
-        if(summary(m)$coef[2,4] < P){abline(m, col="green", lwd=2)}
-      }
+    
     }#end if x_sub_green
+
     if(length(x_sub_blue)>0){
-      points(x_sub_blue, y_sub_blue, pch=24, cex=1, col="blue", bg="lightblue")
-      if (abs(PE)>0.1 & length(x_sub_blue)>5){
-        m <- lm(y_sub_blue~x_sub_blue)
-        if(summary(m)$coef[2,4] < P){abline(m, col="blue", lwd=2)}
-      }
+    
     }#end if x_sub_blue
-      if(length(x_sub_golden)>0){
-      points(x_sub_golden, y_sub_golden, pch=24, cex=1, col="darkgoldenrod4", bg="darkgoldenrod")
-      if (abs(PE)>0.1 & length(x_sub_golden)>5){
-        m <- lm(y_sub_golden~x_sub_golden)
-        if(summary(m)$coef[2,4] < P){abline(m, col="darkgoldenrod", lwd=2)}
-      }
-    }#end if x_sub_blue
+    
+    if(length(x_sub_golden)>0){
+    
+    }#end if x_sub_golden
     
 
     text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="black")
     text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="black")
     
-  text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="black"); text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="black")
+  text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="black");   text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="black")
 
     text(xlim_up*0.75,ylim_lower*0.95, paste("PE =", PE), cex=1.2)
 } # end plot_2D.b
@@ -626,45 +641,82 @@ paired t-test
              bayenv_col=pheno_bayenv_cols,
              raw_col=pheno_raw_cols, stringsAsFactors=FALSE)
   phen_df <- phen_df[c(3,2,4,1),] #reorder for analysis
-  phen_df
+  phen_df$type <- "P"
   
   (env_names <- xorder[envi_ind])
   (env_bayenv_cols <- match( paste(xorder[envi_ind],"_rhoave", sep=""), names(results_pine3)))
   (env_raw_cols <-  match( paste(xorder[envi_ind],"_raw_rho", sep=""), names(results_pine3)))
   ## unit test
   env_df <- data.frame(name=env_names, 
-                       bayenv_name=as.character(names(results_pine3)[env_bayenv_cols]),
+                   bayenv_name=as.character(names(results_pine3)[env_bayenv_cols]),
                        raw_name=as.character(names(results_pine3)[env_raw_cols]),
                        bayenv_col=env_bayenv_cols,
                        raw_col=env_raw_cols, stringsAsFactors=FALSE)
-  env_df
+  env_df$type <- "E"
   
   ### final dataframe
   final_df <- rbind(phen_df, env_df)
   str(final_df)
-#MakeOutlierPlot_with_stat <- function(filename, Group_logical, whichvars,
-#                                      #envi_ind=1:22, pheno_ind=c(1:3,5:17),
-#                                      xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),  width=50, #height=66, type="Bayenv", Green_logical=NULL, Blue_logical=NULL, Golden_logical=NULL){
-    #type = "Bayenv" or "Raw"
-  
-  #pdf(file = filename,width=width,height=height)
-  #par(mfrow=c(length(envi_ind),length(pheno_ind)), mar=c(2,2,0,0), oma=c(6,6,6,0))
-  
-  
+
   # test_set <- results_pine3$Group2_logical
   info1 <- results_pine3[,c("minor_freq","gtcontig", "pos_gcontig")]
   # head(info1)
   
-  for (i in 1:(nrow(final_df)-1)){
-    for (j in (i+1):nrow(final_df)){
+### Part 2: Get correlation between variables ####
+  ls()
+  pine_corrs <- load("../data/PineHeatmap.Rdata")
+  # this data was analyzed for the Science Paper and is in the folder
+  # folder: /20160125 heatmap denograms envi pheno/
+  # R script: AdaptreeEnviPhenoCorrs_pine.R
+  # loads env,env_clust,phen,phen_clust,EvP, EvPclust
+  head(env) ## E vs E correlations
+    colnames(env)
+  head(phen) ## P vs P correlations
+    colnames(phen)
+  head(EvP) ## E vs P correlations
+    colnames(EvP)
+    rownames(EvP)
+  
+### Part 3: Make graphs ####
+    ## Here I do all combos of i and j, because it is useful to be able
+    ## to compare all variables along any chosen axis
+  for (i in 1:nrow(final_df)){
+    for (j in 1:nrow(final_df)){
+      if (i != j){
       print(c(final_df$name[i], final_df$name[j]))
       
-      ### Making a four panel plot
+      if (final_df$type[i]=="P" & final_df$type[j]=="P"){
+        rowN <- which(colnames(phen)==final_df$name[i])
+        colN <- which(colnames(phen)==final_df$name[j])
+        pecorr = phen[rowN,colN]
+      }
+      
+      if (final_df$type[i]=="E" & final_df$type[j]=="E"){
+        rowN <- which(colnames(env)==final_df$name[i])
+        colN <- which(colnames(env)==final_df$name[j])
+        pecorr = env[rowN,colN]
+      }
+      
+      if (final_df$type[i]=="P" & final_df$type[j]=="E"){
+        colN <- which(colnames(phen)==final_df$name[i]) #phenotype in column of EvP
+        rowN <- which(colnames(env)==final_df$name[j]) #envi in row of EvP
+        pecorr = EvP[rowN,colN]
+      }
+      
+      if (final_df$type[i]=="E" & final_df$type[j]=="P"){
+        colN <- which(colnames(phen)==final_df$name[j]) #phenotype in column of EvP
+        rowN <- which(colnames(env)==final_df$name[i]) #envi in row of EvP
+          # note switch of i and j compared to last 'if' statement
+        pecorr = EvP[rowN,colN]
+      }
+          
+      ### Making a four panel plot ####
         ### Upper left plot: plot 2D bayenv
         ### Upper right plot: plot randomizations bayenv
         ### Lower left plot: plot 2D raw
         ### Lower right plot: plot randomizations raw
-      
+      pdf(paste("../figures201611/", final_df$name[i],"_", 
+                final_df$name[j], ".pdf", sep=""), width=8, height=8)
       par(mfrow=c(2,2), mar=c(2,2,2,2), oma=c(0,0,0,0))
       for(type in c("Bayenv", "Raw")){
         if(type=="Bayenv"){colz=final_df$bayenv_col}
@@ -683,14 +735,16 @@ paired t-test
              xlab= "",  xlim=c(-lim,lim),
              ylab= "" , ylim=c(-lim,lim),
              nbin=100, 
-             x_sub=x[Group2_logical], 
-             y_sub=y[Group2_logical],
-             #PE=pecorr,
-             x_sub_blue=x[Group3_logical],
-             y_sub_blue=y[Group3_logical],
+             x_sub=x1[Group2_logical], 
+             y_sub=y1[Group2_logical],
+             PE=round(pecorr,2),
+             x_sub_blue=x1[Group3_logical],
+             y_sub_blue=y1[Group3_logical],
              ) 
           mtext(final_df$name[j], side=2) #y
           mtext(final_df$name[i], side=1) #x
+          if(type=="Bayenv"){mtext("Bayenv", side=3, adj=0)}
+          if(type=="Raw"){mtext("Raw", side=3, adj=0)}
   
         ### Function for Randomization tests ####
         GetSampleCov <- function(test_set, getNull=TRUE){
@@ -806,13 +860,198 @@ paired t-test
                   "Precip P<e", round(log(g3_ttest$p.value,10)), "\n",
                   "Precip quant. test ", g3_qtest, sep="")
         
-        text(-max_x,max_y, labels=plotText, cex=0.4, adj=c(0,1))
+        text(-max_x,max_y, labels=plotText, cex=0.7, adj=c(0,1))
           # Add significance to Plot
     
       }#end loop through type
-      
-      
-  dev.off()
-
-}# end function
+    dev.off()
+      }# end if (i != j)
+    }# end loop through i
+  }# end loop through j
 ```
+
+
+### Plot GCTA effect sizes
+
+```{r}
+pdf("GCTA_effect_graphs.pdf")
+
+### Compare effect sizes and p-values
+x1 <- -log(results_pine3$LAT_p_GCTA,10)
+y1 <- results_pine3$LAT_snp_effect_GCTA
+plot_2D.b(x1, y1, xlab= "LAT gcta -log10 P-value",  
+              ylab= "LAT gcta effect size" , xlim=c(0,10), ylim=c(-5,5),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- -log(results_pine3$MAT_p_GCTA,10)
+y1 <- results_pine3$MAT_snp_effect_GCTA
+plot_2D.b(x1, y1, xlab= "MAT gcta -log10 p-value",  
+              ylab= "MAT gcta effect size" , xlim=c(0,10), ylim=c(-5,5),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- -log(results_pine3$MAP_p_GCTA,10)
+y1 <- scale(results_pine3$MAP_snp_effect_GCTA)
+plot_2D.b(x1, y1, xlab= "MAP gcta -log10 p-value",  
+              ylab= "MAP gcta effect size" , xlim=c(0,8), ylim=c(-10,10),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- -log(results_pine3$Fall_cold_injury_p,10)
+y1 <- results_pine3$Fall_cold_injury_snp_effect
+plot_2D.b(x1, y1, xlab= "FCI gcta -log10 P-value",  
+              ylab= "FCI gcta snp effect" , xlim=c(0,10), ylim=c(-5,5),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+
+x1 <- -log(results_pine3$Winter_cold_injury_p,10)
+y1 <- results_pine3$Winter_cold_injury_snp_effect
+plot_2D.b(x1, y1, xlab= "WCI gcta -log10 P-value",  
+              ylab= "WCI gcta effect" , xlim=c(0,10), ylim=c(-5,5),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- -log(results_pine3$Spring_cold_injury_p,10)
+y1 <- results_pine3$Spring_cold_injury_snp_effect
+plot_2D.b(x1, y1, xlab= "SCI gcta -log10 P-value",  
+              ylab= "SCI gcta effect" , xlim=c(0,10), ylim=c(-5,5),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+### Compare MAT and MAP
+
+x1 <- -log(results_pine3$MAT_p_GCTA,10)
+y1 <- -log(results_pine3$MAP_p_GCTA,10)
+plot_2D.b(x1, y1, xlab= "MAT gcta -log10 P-value",  
+              ylab= "MAP gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+
+x1 <- scale(results_pine3$MAT_snp_effect_GCTA)
+y1 <- scale(results_pine3$MAP_snp_effect_GCTA)
+plot_2D.b(x1, y1, xlab= "MAT snp effect gcta",  
+              ylab= "MAP snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+### Compare MAT and FCI
+
+x1 <- -log(results_pine3$MAT_p_GCTA,10)
+y1 <- -log(results_pine3$Fall_cold_injury_p,10)
+plot_2D.b(x1, y1, xlab= "MAT gcta -log10 P-value",  
+              ylab= "FCI gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- scale(results_pine3$MAT_snp_effect_GCTA)
+y1 <- scale(results_pine3$Fall_cold_injury_snp_effect)
+plot_2D.b(x1, y1, xlab= "MAT snp effect gcta",  
+              ylab= "FCI snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- results_pine3$MAT_rhoave
+y1 <- results_pine3$Fall_cold_injury_rhoave_BAYENV
+plot_2D.b(x1, y1, xlab= "MAT bayenv rho",  
+              ylab= "FCI bayenv rho" , #xlim=c(0,8), ylim=c(0,8),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+
+### Compare FCI and MAP
+
+x1 <- -log(results_pine3$MAP_p_GCTA,10)
+y1 <- -log(results_pine3$Fall_cold_injury_p,10)
+plot_2D.b(x1, y1, xlab= "MAP gcta -log10 P-value",  
+              ylab= "FCI gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+x1 <- scale(results_pine3$MAP_snp_effect_GCTA)
+y1 <- scale(results_pine3$Fall_cold_injury_snp_effect)
+plot_2D.b(x1, y1, xlab= "MAP snp effect gcta",  
+              ylab= "FCI snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+
+
+x1 <- results_pine3$MAP_rhoave
+y1 <- results_pine3$Fall_cold_injury_rhoave_BAYENV
+plot_2D.b(x1, y1, xlab= "MAP bayenv rho",  
+              ylab= "FCI bayenv rho" , #xlim=c(0,8), ylim=c(0,8),
+              nbin=100, 
+              x_sub=x1[Group2_logical], 
+              y_sub=y1[Group2_logical],
+              PE=1,
+              x_sub_blue=x1[Group3_logical],
+              y_sub_blue=y1[Group3_logical],
+              ) 
+dev.off()
