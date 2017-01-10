@@ -1,0 +1,4 @@
+Log
+
+Jan 12, 2017 
+Cleaning up code and moving into this folder

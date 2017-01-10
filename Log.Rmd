@@ -7,7 +7,16 @@ output: html_document
 
 This log is in Blog-style format (newest at top)
 
-## Dec 11, 2016
+## Jan 10, 2017
+Have been getting a lot of feedback from Sam, Kay and Sally A. over the last few weeks on the approach and the manuscript.
+
+1) Decided to leave the phenotypes out and just focus on the environments for the manuscript.
+
+2) Yesterday I remembered that I could plot the prediction ellipse on the data in 2D space using multivariate math, and this turns out to be a much better way of visualizing the data!
+
+3) Email from Sam and Kay: "Have you checked whether the genes that you have found as being in the 2 groups in your galaxy plots are also found in the ortholog list? If not, that would explain why they have so few genes that are also convergence candidates. "
+
+I just checked this today. The convergence candidate list that I have been using is only 25 genes, so it's pretty narrow. In general about 70% of my candidates have spruce orthologs.
 
 
 ## Nov 22, 2016
@@ -264,9 +273,7 @@ This is the beginning of my attempt to integrate the phenotypic, genetic, and en
 * We can estimate the effect that a SNP has on that phenotype with GWAS (the genotype-phenotype association, a slope)
 * With knowledge of the PEA and the GPA, we can visualize the genetic architecture of the genetic-environment-association (Spearman's rho from Bayenv2).
 
-For each phenotype-environment association, here is the conceptual idea:
-
-![PEGA sketch](201508PEGA.png)
+For each phenotype-environment association, here is the conceptual idea: (removed)
 
 If the GEA effects were polarized/adjusted based on the direction of the PEA and GWAS, then we could visualize this in the same way for all traits and environments.
 

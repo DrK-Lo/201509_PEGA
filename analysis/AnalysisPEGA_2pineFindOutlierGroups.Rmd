@@ -195,6 +195,7 @@ MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(
 }# end function
 ```
 
+
 ### Group 1: Top SNP's from Sam's top candidates
 
 ```{r,label="Top SNP's from Sam's top candidates" }

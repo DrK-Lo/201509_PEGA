@@ -1,0 +1,176 @@
+---
+title: "Analysis_PEGA_2"
+author: "Katie Lotterhos"
+date: "1/10/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load data
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysisV2/")
+```{r, label="load data"}
+load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
+  #if(!("ash" %in% installed.packages())){install.packages("ash")}
+  #require(ash)
+  require(fields)
+  require(dplyr)
+  require(cluster)
+source("plot2Dcov.R")
+```
+This loads:
+
+* PE
+* results_pine3 (data frame with SNPs in rows and results in columns)
+* gtcontig_array 
+* gtcontig_array_names
+* PE_matchGWAS
+* PE_matchGEA
+
+
+### Group 1: Top SNP's from Sam's top candidates
+
+```{r,label="Top SNP's from Sam's top candidates" }
+  superdf <- results_pine3[results_pine3$pine_super_p9 | 
+                           results_pine3$pine_super_raw_p9,]
+  names(results_pine3)[grep("raw_rho", names(results_pine3))]
+  cols_raw <- grep("raw_rho", names(results_pine3))
+  is.superdf <- matrix(NA, nrow(superdf), length(cols_raw))
+  colnames(is.superdf) <- names(results_pine3)[cols_raw]
+  tail <- 0.999
+  for (i in 1:length(cols_raw)){
+    a<- sort(abs(results_pine3[,cols_raw[i]]), na.last = NA)
+    sorted.index <- round(length(a)*.999)
+    rho_cutoff <- a[sorted.index]
+    is.superdf[,i] <- abs(superdf[,cols_raw[i]])>rho_cutoff
+    print(i)
+  }
+  num.var.raw.out <- rowSums(is.superdf,na.rm = TRUE)
+  nrow(superdf) #total number of SNPs in super contigs
+  sum(num.var.raw.out>0) # number of super SNPs in super contigs
+  
+  #number of all Sam's super contigs
+  length(unique(superdf$gtcontig)) 
+  # number of super contigs with superSNPs (# contigs in Group 1)
+  length(unique(superdf$gtcontig[num.var.raw.out>0])) 
+
+  rm(superdf)
+  
+  ### Logical Group 1
+  results_pine3$Group1_logical <- results_pine3$gcontig__gcontig_pos %in% Group1_allSuperSNPs$gcontig__gcontig_pos
+
+  ### Sanity check - number of contigs in Group 1 the same
+  length(levels(factor(results_pine3$gtcontig[results_pine3$Group1_logical])))
+  
+  G1_hist <- sort(table(results_pine3$gtcontig[results_pine3$Group1_logical]),decreasing = TRUE)
+  
+  barplot(G1_hist, xlab="Contig", ylab="Number of SNPs", main="Distribution of 359 top SNPs in 107 contigs", las=2, cex.names=0.3)
+  
+  top_contigs <- names(G1_hist)
+  
+  ### Which ones of Group 1 are super convergent outliers
+  results_pine3$gtcontig[results_pine3$Group1_logical & results_pine3$pine_super_convergent]
+  
+  ## 25 super convergent outliers
+  names(table(results_pine3$gtcontig[results_pine3$pine_super_convergent]))
+```
+
+
+### Group 1 Make some comparison plots
+```{r}
+
+names(results_pine3)[grep("MAT", names(results_pine3))]
+
+plot2Dcov(x=results_pine3$MAT_rhoave,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "MAT rho Bayenv", 
+       ylab= "MAP rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub_orange=results_pine3$MAT_rhoave[results_pine3$Group1_logical], 
+       y_sub_orange=results_pine3$MAP_rhoave[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+plot2Dcov(x=results_pine3$MAT_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "MAT rho raw", 
+       ylab= "MAP rho raw" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub_orange=results_pine3$MAT_raw_rho[results_pine3$Group1_logical], 
+       y_sub_orange=results_pine3$MAP_raw_rho[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+```
+
+
+### Color outliers by various variables to determine variables that 
+The last figure, especially the Bayenv-corrected one, suggests that there are two groups of SNPs that are behaving differently in the data. We used data visualization to determine which environmental variables (if any) could explain the groupings.
+
+The rationale is that by subsetting the data to outliers in each environmental variable, and re-visualizing the MAP-MAT comparison, we should be able to "see" which variables determine the groupings.
+
+put figures into results/groupingVisualizations
+```{r}
+
+names(results_pine3)[cols_raw]
+  # The first 22 variables are environmental variables. We removed elevation for this analysis.
+env_cols <- cols_raw[c(1:2,3:22)]
+
+pdf(file = "../results/1groupingVisualizations.pdf", width=7, height=12)
+
+### Make the plots first will ALL snps
+par(mfrow=c(2,1))
+plot2Dcov(x=results_pine3$MAT_rhoave,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "MAT rho Bayenv", 
+       ylab= "MAP rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub_orange=results_pine3$MAT_rhoave[results_pine3$Group1_logical], 
+       y_sub_orange=results_pine3$MAP_rhoave[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+plot2Dcov(x=results_pine3$MAT_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "MAT rho raw", 
+       ylab= "MAP rho raw" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub_orange=results_pine3$MAT_raw_rho[results_pine3$Group1_logical], 
+       y_sub_orange=results_pine3$MAP_raw_rho[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+
+for (i in 1:length(env_cols)){
+  focalvar <- results_pine3[,env_cols[i]]
+  focalvarname <- names(results_pine3)[env_cols[i]]
+  print(focalvarname)
+  a<- sort(abs(focalvar), na.last = NA)
+  sum(is.na(a))
+  sorted.index <- round(length(a)*.999)
+  rho_cutoff <- a[sorted.index]
+  rho_cutoff
+  
+  x_sub <- results_pine3$MAT_rhoave[abs(focalvar)>rho_cutoff]
+  y_sub <- results_pine3$MAP_rhoave[abs(focalvar)>rho_cutoff]
+  
+  
+  par(mfrow=c(2,1))
+  plot2Dcov(x=results_pine3$MAT_rhoave,
+         y=results_pine3$MAP_rhoave, 
+         xlab= "MAT rho Bayenv", 
+         ylab= "MAP rho Bayenv" , 
+         nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+         x_sub_green=x_sub, 
+         y_sub_green=y_sub,
+         PE=0.33, PElab=c("MAT", "MAP"))
+  mtext(focalvarname,side = 3)
+  
+  plot2Dcov(x=results_pine3$MAT_raw_rho,
+         y=results_pine3$MAP_raw_rho, 
+         xlab= "MAT rho raw", 
+         ylab= "MAP rho raw" , 
+         nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+         x_sub_green=x_sub, 
+         y_sub_green=y_sub,
+         PE=0.33, PElab=c("MAT", "MAP"))
+}# end for loop
+dev.off() #end pdf
+```
