@@ -25,9 +25,10 @@ This loads:
 * PE_matchGEA
 
 ### Plotting function plot_2D.b
-plot_2D.b does not flip the phenotype axis.  Instead it colors the quadrant for the expected direction based on the PE association
+plot_2D.b does not flip the phenotype axis.  Instead it colors the quadrant for the expected direction based on the PE association. This version also draws the 95% CI on the covariance matrix.
+
 ```{r}
-plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub_orange=NULL, y_sub_orange=NULL, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL,  y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1){
+plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin, x_sub_orange=NULL, y_sub_orange=NULL, x_sub_green=NULL, y_sub_green=NULL, x_sub_blue=NULL,  y_sub_blue=NULL,x_sub_golden=NULL,y_sub_golden=NULL, PE=1, PElab = c("V1", "V2")){
   #if(PE<0){x <- -x; x_sub <- -x_sub}
 
   data1 <- cbind(x, y)
@@ -59,8 +60,8 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
              #xaxt="n", yaxt="n", bty="n")
     
     if(PE >= 0.1){
-      polygon(c(0,1,1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.1))
-      polygon(c(0,-1,-1,0,0), c(0,0,-1,-1,0), col=rgb(0,0,0,0.1))
+      polygon(c(0,1,1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.05))
+      polygon(c(0,-1,-1,0,0), c(0,0,-1,-1,0), col=rgb(0,0,0,0.05))
       }
     if(PE <= -0.1){
       polygon(c(0,-1,-1,0,0), c(0,0,1,1,0),col=rgb(0,0,0,0.05))
@@ -79,9 +80,10 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
     ### Function for plotting covariance matrix
     plot_mycov <- function(data1, CI = 0.95, color="black", ...){
       # data1 is a data frame with x, y in columns
-      C.ls2 <- cov(data1)
-      m.ls2 <- colMeans(data1)
+      C.ls2 <- cov(data1[complete.cases(data1),])
+      m.ls2 <- colMeans(data1[complete.cases(data1),])
       d2.95 <- qchisq(CI, df = 2)
+      #d2.95 <- qnorm(0.99)
       lines(ellipsoidPoints(C.ls2, d2.95, loc=m.ls2), lwd=2, col=color, ...)
     }
     
@@ -89,35 +91,31 @@ plot_2D.b <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3), nbin,
     plot_mycov(data1)
     
     ### Make function for plotting sub points
-    plot_mycov_sub <- function(x_sub, y_sub, pch, color){
+    plot_mycov_sub <- function(x_sub, y_sub, outlinecolor, bgcolor, linecolor,  mylty, mypch, ...){
       if(length(x_sub)>0){
-      points(x_sub, y_sub, pch=24, cex=1, col="darkorange", bg="orange")
-      plot_mycov(data.frame(x_sub_orange, y_sub_orange), col="darkorange", lty=2)
-    }
+      points(x_sub, y_sub, cex=1, col=outlinecolor, bg=bgcolor, pch=mypch)
+      plot_mycov(data.frame(x_sub, y_sub), col=linecolor, lty=mylty,...)
+      }
     }
     
     ### Make cov plot for x_sub_orange, y_sub_orange
+    plot_mycov_sub(x_sub_orange, y_sub_orange, outlinecolor=adjustcolor("darkorange",0.7), bgcolor=adjustcolor("orange",0.7), mypch=24, mylty=2, linecolor="#CC6600")
     
+    plot_mycov_sub(x_sub_green, y_sub_green, linecolor="darkgreen", bgcolor="lightgreen", mypch=21, mylty=3)
     
-    if(length(x_sub_green)>0){
+    plot_mycov_sub(x_sub_blue, y_sub_blue, outlinecolor=adjustcolor("blue",0.7), bgcolor=adjustcolor("lightblue",0.7), mypch=22, mylty=4, linecolor="darkblue")
     
-    }#end if x_sub_green
-
-    if(length(x_sub_blue)>0){
-    
-    }#end if x_sub_blue
-    
-    if(length(x_sub_golden)>0){
-    
-    }#end if x_sub_golden
+    plot_mycov_sub(x_sub_golden, y_sub_golden, linecolor="darkred", bgcolor="gold", mypch=23, mylty=6)
     
 
-    text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="black")
-    text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="black")
+    #text(xlim_up*0.05, ylim_up*0.95, "+", cex=2, col="black")
+    #text(xlim_up*0.05, ylim_lower*0.95, "-", cex=2, col="black")
     
-  text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="black");   text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="black")
+    #text(xlim_up*0.95,ylim_up*0.05,"+", cex=2, col="black")       
+    #text(xlim_lower*0.95,ylim_up*0.05,"-", cex=2, col="black")
 
-    text(xlim_up*0.75,ylim_lower*0.95, paste("PE =", PE), cex=1.2)
+    t <- bquote(~rho ~ "(" ~ .(PElab[1]) ~ "," ~ .(PElab[2]) ~ ") =" ~ .(PE))
+    text(xlim_up*0.5,ylim_lower*0.95, t, cex=1.2)
 } # end plot_2D.b
 ```
 
@@ -177,9 +175,9 @@ MakeOutlierPlot <- function(filename, Group_logical, envi_ind=1:22, pheno_ind=c(
          xlab= "", xlim=xlim,
          ylab= "" , ylim=ylim,
          nbin=100, 
-         x_sub=x[Group_logical], 
-         y_sub=y[Group_logical],
-         PE=pecorr,
+         x_sub_orange=x[Group_logical], 
+         y_sub_orange=y[Group_logical],
+         PE=pecorr, 
          x_sub_green=x[Green_logical],
          y_sub_green=y[Green_logical],
          x_sub_blue=x[Blue_logical],
@@ -270,35 +268,35 @@ plot_2D.b(x=results_pine3$MAT_rhoave,
        xlab= "MAT rho Bayenv", 
        ylab= "MAP rho Bayenv" , 
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub=results_pine3$MAT_rhoave[Group1_logical], 
-       y_sub=results_pine3$MAP_rhoave[Group1_logical],
-       PE=0.33)
+       x_sub_orange=results_pine3$MAT_rhoave[Group1_logical], 
+       y_sub_orange=results_pine3$MAP_rhoave[Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
 
 plot_2D.b(x=results_pine3$MAT_raw_rho,
        y=results_pine3$MAP_raw_rho, 
        xlab= "MAT rho raw", 
        ylab= "MAP rho raw" , 
        nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       x_sub=results_pine3$MAT_raw_rho[Group1_logical], 
-       y_sub=results_pine3$MAP_raw_rho[Group1_logical],
-       PE=0.33)
+       x_sub_orange=results_pine3$MAT_raw_rho[Group1_logical], 
+       y_sub_orange=results_pine3$MAP_raw_rho[Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
 
 plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$LAT_rhoave, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
-       y_sub=superdf$LAT_rhoave[num.var.raw.out>0],
-       PE=-0.42)
+       x_sub_orange=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub_orange=superdf$LAT_rhoave[num.var.raw.out>0],
+       PE=-0.42, PElab=c("FCI", "LAT"))
 
 plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        y=results_pine3$MAP_rhoave, 
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
-       y_sub=superdf$MAP_rhoave[num.var.raw.out>0],
+       x_sub_orange=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub_orange=superdf$MAP_rhoave[num.var.raw.out>0],
        PE=0.25)
 
 plot_2D.b(x=results_pine3$Fall_cold_injury_p_raw_rho,
@@ -306,8 +304,8 @@ plot_2D.b(x=results_pine3$Fall_cold_injury_p_raw_rho,
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
        nbin=100, xlim=c(-1,1), ylim=c(-1,1),
-       x_sub=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
-       y_sub=superdf$MAP_raw_rho[num.var.raw.out>0],
+       x_sub_orange=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
+       y_sub_orange=superdf$MAP_raw_rho[num.var.raw.out>0],
        PE=0.25)
 
 plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
@@ -315,8 +313,8 @@ plot_2D.b(x=results_pine3$Fall_cold_injury_rhoave_BAYENV,
        xlab= "FCI rho Bayenv", 
        ylab= "LAT rho Bayenv" , 
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
-       y_sub=superdf$Eref_rhoave[num.var.raw.out>0],
+       x_sub_orange=superdf$Fall_cold_injury_rhoave_BAYENV[num.var.raw.out>0], 
+       y_sub_orange=superdf$Eref_rhoave[num.var.raw.out>0],
        PE=0.26)
 
 
@@ -325,8 +323,8 @@ plot_2D.b(x=results_pine3$Fall_cold_injury_p_raw_rho,
        xlab= "FCI rho raw", 
        ylab= "LAT rho raw" , 
        nbin=100, xlim=c(-1,1), ylim=c(-1,1),
-       x_sub=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
-       y_sub=superdf$LAT_raw_rho[num.var.raw.out>0],
+       x_sub_orange=superdf$Fall_cold_injury_p_raw_rho[num.var.raw.out>0], 
+       y_sub_orange=superdf$LAT_raw_rho[num.var.raw.out>0],
        PE=-0.42)
 
 
@@ -335,8 +333,8 @@ plot_2D.b(x=results_pine3$Fall_cold_injury_snp_effect,
        xlab= "FCI gcta", 
        ylab= "LAT gcta" , 
        nbin=100, xlim=NULL, ylim=NULL,
-       x_sub=superdf$Fall_cold_injury_snp_effect[num.var.raw.out>0], 
-       y_sub=superdf$LAT_snp_effect_GCTA[num.var.raw.out>0],
+       x_sub_orange=superdf$Fall_cold_injury_snp_effect[num.var.raw.out>0], 
+       y_sub_orange=superdf$LAT_snp_effect_GCTA[num.var.raw.out>0],
        PE=-0.42)
 
 ````
@@ -481,17 +479,20 @@ MakeOutlierPlot("Group1sm_EnvByPhenoBayenv1.pdf", Group1_logical , type="Bayenv"
 MakeOutlierPlot("Group1sm_EnvByPhenoRaw1.pdf", Group1_logical, type="Raw", envi_ind = envi_ind_sm, pheno_ind=pheno_ind_sm, width=10, height=12, xlim=c(-1,1), ylim=c(-1,1))
 ```
 
+
+
+
 ```{r}
 x=results_pine3$root_wt_shoot_wt_1_rhoave_BAYENV 
   # Total weight (ratio is without 1)
 y=results_pine3$Fall_cold_injury_rhoave_BAYENV
 par(mar=c(4,4,1,1))
-plot_2D.b(x,y,xlab="Total weight", ylab="FCI", 
+plot_2D.b(x,y,xlab="Total biomass", ylab="FCI", 
                       xlim=c(-0.3,0.3), 
                       ylim=c(-0.3,0.3), 
                       nbin=100, 
-                      x_sub=x[Group2_logical], 
-                      y_sub=y[Group2_logical],
+                      x_sub_orange=x[Group2_logical], 
+                      y_sub_orange=y[Group2_logical],
                       x_sub_blue=x[Group3_logical], 
                       y_sub_blue=y[Group3_logical],
                       PE=-1)
@@ -501,8 +502,8 @@ plot_2D.b(x,y,xlab="Total Weight", ylab="FCI",
                       xlim=c(-0.3,0.3), 
                       ylim=c(-0.3,0.3), 
                       nbin=100, 
-                      x_sub=x[Group1_logical & !Group2_logical & !Group3_logical], 
-                      y_sub=y[Group1_logical & !Group2_logical & !Group3_logical],
+                      x_sub_orange=x[Group1_logical & !Group2_logical & !Group3_logical], 
+                      y_sub_orange=y[Group1_logical & !Group2_logical & !Group3_logical],
                       PE=-1)
 
 x=results_pine3$root_wt_shoot_wt_p_1_raw_rho 
@@ -511,8 +512,8 @@ plot_2D.b(x,y,xlab="Total weight", ylab="FCI",
                       xlim=c(-1,1), 
                       ylim=c(-1,1), 
                       nbin=100, 
-                      x_sub=x[Group2_logical], 
-                      y_sub=y[Group2_logical],
+                      x_sub_orange=x[Group2_logical], 
+                      y_sub_orange=y[Group2_logical],
                       x_sub_blue=x[Group3_logical], 
                       y_sub_blue=y[Group3_logical],
                       PE=-1)
@@ -520,8 +521,8 @@ plot_2D.b(x,y,xlab="Total weight", ylab="FCI",
                       xlim=c(-1,1), 
                       ylim=c(-1,1), 
                       nbin=100, 
-                      x_sub=x[Group1_logical & !Group2_logical & !Group3_logical], 
-                      y_sub=y[Group1_logical & !Group2_logical & !Group3_logical], 
+                      x_sub_orange=x[Group1_logical & !Group2_logical & !Group3_logical], 
+                      y_sub_orange=y[Group1_logical & !Group2_logical & !Group3_logical], 
                       PE=-1)
 ```
 
@@ -580,8 +581,18 @@ write.table(G1_df_go, "../PineTopCandidates_WithGO.txt", col.names=TRUE, row.nam
 ff <- read.table ("../data/MAT06-BLUEs&Climate-pine.csv", sep = ",", header = T)
 head(ff)
 PE_MAT_MAP = cor(ff$MAT, ff$log.MAP.,use = "pairwise.complete.obs")
-par(mar=c(4,4,1,1))
-plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, "Mean Annual Temperature", "Mean Annual Precipitation", nbin=100, x_sub=results_pine3$MAT_rhoave[Group2_logical], y_sub=results_pine3$MAP_rhoave[Group2_logical], x_sub_blue = results_pine3$MAT_rhoave[Group3_logical], y_sub_blue=results_pine3$MAP_rhoave[Group3_logical], PE = round(PE_MAT_MAP,2))
+
+par(mar=c(4,5,1,1))
+
+plot_2D.b(results_pine3$MAT_rhoave, results_pine3$MAP_rhoave, 
+          expression(rho*"["*p*", mean annual temperature (MAT)]"), 
+          expression(rho*"["*p*", mean annual precipitation (MAP)]"), 
+          nbin=100, 
+          x_sub_orange=results_pine3$MAT_rhoave[Group2_logical], 
+          y_sub_orange=results_pine3$MAP_rhoave[Group2_logical], 
+          x_sub_blue = results_pine3$MAT_rhoave[Group3_logical], 
+          y_sub_blue=results_pine3$MAP_rhoave[Group3_logical], 
+          PE = round(PE_MAT_MAP,2), PElab=c("MAT", "MAP"))
 ```
 
 ### Save .Rdata for further analysis (optional)
@@ -735,8 +746,8 @@ paired t-test
              xlab= "",  xlim=c(-lim,lim),
              ylab= "" , ylim=c(-lim,lim),
              nbin=100, 
-             x_sub=x1[Group2_logical], 
-             y_sub=y1[Group2_logical],
+             x_sub_orange=x1[Group2_logical], 
+             y_sub_orange=y1[Group2_logical],
              PE=round(pecorr,2),
              x_sub_blue=x1[Group3_logical],
              y_sub_blue=y1[Group3_logical],
@@ -871,6 +882,11 @@ paired t-test
 ```
 
 
+
+
+
+
+
 ### Plot GCTA effect sizes
 
 ```{r}
@@ -882,8 +898,8 @@ y1 <- results_pine3$LAT_snp_effect_GCTA
 plot_2D.b(x1, y1, xlab= "LAT gcta -log10 P-value",  
               ylab= "LAT gcta effect size" , xlim=c(0,10), ylim=c(-5,5),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -894,8 +910,8 @@ y1 <- results_pine3$MAT_snp_effect_GCTA
 plot_2D.b(x1, y1, xlab= "MAT gcta -log10 p-value",  
               ylab= "MAT gcta effect size" , xlim=c(0,10), ylim=c(-5,5),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -906,8 +922,8 @@ y1 <- scale(results_pine3$MAP_snp_effect_GCTA)
 plot_2D.b(x1, y1, xlab= "MAP gcta -log10 p-value",  
               ylab= "MAP gcta effect size" , xlim=c(0,8), ylim=c(-10,10),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -918,8 +934,8 @@ y1 <- results_pine3$Fall_cold_injury_snp_effect
 plot_2D.b(x1, y1, xlab= "FCI gcta -log10 P-value",  
               ylab= "FCI gcta snp effect" , xlim=c(0,10), ylim=c(-5,5),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -931,8 +947,8 @@ y1 <- results_pine3$Winter_cold_injury_snp_effect
 plot_2D.b(x1, y1, xlab= "WCI gcta -log10 P-value",  
               ylab= "WCI gcta effect" , xlim=c(0,10), ylim=c(-5,5),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -943,8 +959,8 @@ y1 <- results_pine3$Spring_cold_injury_snp_effect
 plot_2D.b(x1, y1, xlab= "SCI gcta -log10 P-value",  
               ylab= "SCI gcta effect" , xlim=c(0,10), ylim=c(-5,5),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -957,8 +973,8 @@ y1 <- -log(results_pine3$MAP_p_GCTA,10)
 plot_2D.b(x1, y1, xlab= "MAT gcta -log10 P-value",  
               ylab= "MAP gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -970,8 +986,8 @@ y1 <- scale(results_pine3$MAP_snp_effect_GCTA)
 plot_2D.b(x1, y1, xlab= "MAT snp effect gcta",  
               ylab= "MAP snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -984,8 +1000,8 @@ y1 <- -log(results_pine3$Fall_cold_injury_p,10)
 plot_2D.b(x1, y1, xlab= "MAT gcta -log10 P-value",  
               ylab= "FCI gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -996,8 +1012,8 @@ y1 <- scale(results_pine3$Fall_cold_injury_snp_effect)
 plot_2D.b(x1, y1, xlab= "MAT snp effect gcta",  
               ylab= "FCI snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -1008,8 +1024,8 @@ y1 <- results_pine3$Fall_cold_injury_rhoave_BAYENV
 plot_2D.b(x1, y1, xlab= "MAT bayenv rho",  
               ylab= "FCI bayenv rho" , #xlim=c(0,8), ylim=c(0,8),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -1023,8 +1039,8 @@ y1 <- -log(results_pine3$Fall_cold_injury_p,10)
 plot_2D.b(x1, y1, xlab= "MAP gcta -log10 P-value",  
               ylab= "FCI gcta -log10 P-value" , xlim=c(0,8), ylim=c(0,8),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -1035,8 +1051,8 @@ y1 <- scale(results_pine3$Fall_cold_injury_snp_effect)
 plot_2D.b(x1, y1, xlab= "MAP snp effect gcta",  
               ylab= "FCI snp effect gcta" , xlim=c(-15,15), ylim=c(-15,15),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
@@ -1048,10 +1064,49 @@ y1 <- results_pine3$Fall_cold_injury_rhoave_BAYENV
 plot_2D.b(x1, y1, xlab= "MAP bayenv rho",  
               ylab= "FCI bayenv rho" , #xlim=c(0,8), ylim=c(0,8),
               nbin=100, 
-              x_sub=x1[Group2_logical], 
-              y_sub=y1[Group2_logical],
+              x_sub_orange=x1[Group2_logical], 
+              y_sub_orange=y1[Group2_logical],
               PE=1,
               x_sub_blue=x1[Group3_logical],
               y_sub_blue=y1[Group3_logical],
               ) 
 dev.off()
+```
+
+### Cross-check with orthologs
+Checked whether the genes that you have found as being in the 2 groups in your galaxy plots are also found in the ortholog list? If not, that would explain why they have so few genes that are also convergence candidates. 
+
+```{r}
+head(results_pine3)[,1:10]
+tail(results_pine3)[,1:10]
+
+orthos <- read.table("../data/all_orthologs_analysed.txt", header=TRUE)
+head(orthos)
+op <- as.character(orthos$pine)
+head(op)
+
+### Total number of orthologs
+length(op)
+
+### Total number of orthologs in results_pine3
+length(which(op %in% results_pine3$tcontig))
+
+### Total number of contigs in top SNPs
+length(levels(factor(results_pine3$tcontig[Group1_logical])))
+### Total number of orthologs in all top SNPs
+length(which(op %in% results_pine3$tcontig[Group1_logical]))
+
+### Total number of contigs in temperature group
+length(levels(factor(results_pine3$tcontig[Group2_logical])))
+### Total number of orthologs in temperature group
+length(which(op %in% results_pine3$tcontig[Group2_logical]))
+
+### Total number of contigs in precipitation group
+length(levels(factor(results_pine3$tcontig[Group3_logical])))
+### Total number of orthologs in precipitation group
+length(which(op %in% results_pine3$tcontig[Group3_logical]))
+
+### Total number of super convergent outliers 
+length(levels(factor(results_pine3$tcontig[results_pine3$pine_super_convergent])))
+
+```
