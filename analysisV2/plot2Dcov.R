@@ -96,7 +96,7 @@ plot2Dcov <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
     
     plot_mycov_sub(x_sub_blue, y_sub_blue, outlinecolor=adjustcolor("blue",0.7), bgcolor=adjustcolor("lightblue",0.7), mypch=22, mylty=4, linecolor="darkblue")
     
-    plot_mycov_sub(x_sub_golden, y_sub_golden, linecolor="darkred", bgcolor="gold", mypch=23, mylty=6)
+    plot_mycov_sub(x_sub_golden, y_sub_golden, outlinecolor=adjustcolor("darkred", 0.7), bgcolor=adjustcolor("gold",0.7), mypch=23, mylty=6, linecolor="darkred")
 
     t <- bquote(~rho ~ "(" ~ .(PElab[1]) ~ "," ~ .(PElab[2]) ~ ") =" ~ .(PE))
     text(xlim_up*0.5,ylim_lower*0.95, t, cex=1.2)

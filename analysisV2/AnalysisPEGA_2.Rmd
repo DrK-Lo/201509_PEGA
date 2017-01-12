@@ -14,7 +14,7 @@ setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysisV2/"
 ```{r, label="load data"}
 load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
   #if(!("ash" %in% installed.packages())){install.packages("ash")}
-  #require(ash)
+  require(ash)
   require(fields)
   require(dplyr)
   require(cluster)
@@ -55,12 +55,16 @@ This loads:
   length(unique(superdf$gtcontig)) 
   # number of super contigs with superSNPs (# contigs in Group 1)
   length(unique(superdf$gtcontig[num.var.raw.out>0])) 
-
-  rm(superdf)
   
+   ### Dataframe of Group 1
+  Group1_allSuperSNPs <- superdf[num.var.raw.out>0,]
+  dim(Group1_allSuperSNPs)
   ### Logical Group 1
   results_pine3$Group1_logical <- results_pine3$gcontig__gcontig_pos %in% Group1_allSuperSNPs$gcontig__gcontig_pos
-
+  
+   ### Sanity check - number of SNPs in Group 1 the same
+  sum(results_pine3$Group1_logical)
+  
   ### Sanity check - number of contigs in Group 1 the same
   length(levels(factor(results_pine3$gtcontig[results_pine3$Group1_logical])))
   
@@ -69,13 +73,56 @@ This loads:
   barplot(G1_hist, xlab="Contig", ylab="Number of SNPs", main="Distribution of 359 top SNPs in 107 contigs", las=2, cex.names=0.3)
   
   top_contigs <- names(G1_hist)
-  
-  ### Which ones of Group 1 are super convergent outliers
-  results_pine3$gtcontig[results_pine3$Group1_logical & results_pine3$pine_super_convergent]
-  
-  ## 25 super convergent outliers
-  names(table(results_pine3$gtcontig[results_pine3$pine_super_convergent]))
 ```
+
+
+### Compare my list to Yeaman 2016 convergence candidates
+These are genes we think are true positives because they adapt to climate in both pine and spruce.
+
+Yeaman et al. 2016 identified 47 orthologs with FDR correction
+
+```{r}
+sy <- read.table("../data/orthologs/parallelism_genes_pine_spruce_q05.txt")
+head(sy)
+nrow(sy)
+sy_top <- unique(sy$V1)
+length(sy_top)
+length(unique(sy$V2))
+  ### Make sure all contigs in list are in my df
+  for (i in 1:length(sy_top)){
+    cd <- as.character(sy_top[i])
+    if(length(which(sy_top[i]==results_pine3$gtcontig))==0){
+      print(c(i, "missing",cd))
+    }else{
+      print(c(i, "not missing", cd))
+    }
+  }
+
+  ### Which ones of Group 1 are super convergent outliers
+  sum(top_contigs %in% sy$V1)
+  sum(sy$V1 %in% top_contigs)
+  
+  top_contigs[which(top_contigs %in% sy$V1)]
+```
+According to the above results, 9 of those 47 are in my list of 107 top candidates.
+
+We can also use a less restrictive list, e.g. orthologs that are significant at P < 0.05 without FDR correction.
+
+TO DO. Can do spruce but need to use orthology table.
+
+```{r}
+sy2 <- read.table("../data/orthologs/pine_orthologs_to_spruce_top_candidates_p05.txt", header=TRUE)
+head(sy2)
+nrow(sy2)
+
+orthoP05 <- unique(sy2$tcontig[sy2$pvalue < 0.05])
+length(orthoP05)
+  ### Which ones of Group 1 are super convergent outliers
+  sum(top_contigs %in% orthoP05)
+  
+  top_contigs[which(top_contigs %in% orthoP05)]
+```
+
 
 
 ### Group 1 Make some comparison plots
@@ -113,7 +160,8 @@ put figures into results/groupingVisualizations
 
 names(results_pine3)[cols_raw]
   # The first 22 variables are environmental variables. We removed elevation for this analysis.
-env_cols <- cols_raw[c(1:2,3:22)]
+env_cols <- cols_raw[c(1:22)]
+names(results_pine3)[env_cols]
 
 pdf(file = "../results/1groupingVisualizations.pdf", width=7, height=12)
 
@@ -148,8 +196,11 @@ for (i in 1:length(env_cols)){
   rho_cutoff <- a[sorted.index]
   rho_cutoff
   
-  x_sub <- results_pine3$MAT_rhoave[abs(focalvar)>rho_cutoff]
-  y_sub <- results_pine3$MAP_rhoave[abs(focalvar)>rho_cutoff]
+  x_sub_bayenv <- results_pine3$MAT_rhoave[abs(focalvar)>rho_cutoff & results_pine3$Group1_logical]
+  y_sub_bayenv <- results_pine3$MAP_rhoave[abs(focalvar)>rho_cutoff  & results_pine3$Group1_logical]
+
+  x_sub_raw <- results_pine3$MAT_raw_rho[abs(focalvar)>rho_cutoff  & results_pine3$Group1_logical]
+  y_sub_raw <- results_pine3$MAP_raw_rho[abs(focalvar)>rho_cutoff  & results_pine3$Group1_logical]  
   
   
   par(mfrow=c(2,1))
@@ -158,8 +209,8 @@ for (i in 1:length(env_cols)){
          xlab= "MAT rho Bayenv", 
          ylab= "MAP rho Bayenv" , 
          nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-         x_sub_green=x_sub, 
-         y_sub_green=y_sub,
+         x_sub_green=x_sub_bayenv, 
+         y_sub_green=y_sub_bayenv,
          PE=0.33, PElab=c("MAT", "MAP"))
   mtext(focalvarname,side = 3)
   
@@ -168,9 +219,442 @@ for (i in 1:length(env_cols)){
          xlab= "MAT rho raw", 
          ylab= "MAP rho raw" , 
          nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-         x_sub_green=x_sub, 
-         y_sub_green=y_sub,
+         x_sub_green=x_sub_raw, 
+         y_sub_green=y_sub_raw,
          PE=0.33, PElab=c("MAT", "MAP"))
 }# end for loop
 dev.off() #end pdf
+```
+
+Inspection of the above plotting reveals two or three groups:
+
+The Freezing Group:
+
+Outliers from these variables fall into the 1st and 3rd quadrants of the MAT-MAP comparison:
+
+LAT, MAT, MCMT, TD, DD_0, NFFD, eFFP, EMT
+
+
+The Aridity Group:
+
+Outliers from these variables fall into the 2nd and 4th quadrants of the MAT-MAP comparison:
+
+MSP, AHM, SHM, EXT, CMD
+
+
+Eref (Hargreaves reference evaporation) has outliers that go with both groups, which is really interesting.
+
+## Determine more objectively which variables predict SNP behavior
+The above deliniation of groups is based on visualizing the data. We can test more objectively whether outliers from any particular variable have SNPs that fall into more into the hot/wet & cold/dry (1st quadrant and 3rd quadrant) spectrum or more into the cold/wet & hot/dry (2nd and 4th quadrants) spectrum of the MAT-MAP comparison.
+
+The null hypothesis is that 50% of outlier SNPs from any particular variable fall into the 1st/3rd quandrants and 50% fall into the 2nd/4th quadrants. We can test this hypothesis with a binomial test, with the number of trials $n$ equal to the the number of outlier SNPs in that variable, the number of successes equal to the number of SNPs that fall into the 1st/3rd quadrants, and the probability of success $p = 0.5$.
+
+```{r}
+
+dim(Group1_allSuperSNPs)
+names(Group1_allSuperSNPs[,env_cols])
+
+is.superdf <- data.frame(is.superdf)
+dim(is.superdf)
+names(is.superdf)
+names(superdf)
+
+binom_result.df <- data.frame(index=1:22, env=NA, n=NA,  binom.raw.P=NA, binom.raw.est=NA, binom.bay.P=NA, binom.bay.est=NA)
+
+for (i in 1:22){
+  logical_var <- is.superdf[,i]
+  
+  binom_result.df$env[i] <- names(is.superdf)[i]
+  
+  ### number of SNPs in test
+  n <- sum(logical_var, na.rm=TRUE)
+  binom_result.df$n[i] <- n
+  MAT <- superdf$MAT_raw_rho[logical_var==TRUE]
+  MAP <- superdf$MAP_raw_rho[logical_var==TRUE]
+  
+  MAT_bay <- superdf$MAT_rhoave[logical_var]
+  MAP_bay <- superdf$MAP_rhoave[logical_var]
+  
+  ### MAT x MAP
+  ### If >0, SNP in 1st or 3rd quadrant
+  ### If <0, SNP in 2nd or 4th quadrant
+  success <- sum(MAT*MAP>0, na.rm=TRUE)
+  fail <- sum(MAT*MAP<0, na.rm=TRUE)
+  
+  ### Sanity check
+  n ==  (success + fail)
+  
+  raw_test <- binom.test(n=n, x=success, p=0.5)
+  
+  bayenv_test <- binom.test(n=n, x=sum(MAT_bay*MAP_bay>0, na.rm=TRUE), p=0.5)
+  
+  binom_result.df$binom.raw.P[i] <- log(raw_test$p.value,10)
+  
+  binom_result.df$binom.bay.P[i] <- log(bayenv_test$p.value,10)
+  
+  binom_result.df$binom.raw.est[i] <- raw_test$estimate
+  binom_result.df$binom.bay.est[i] <- bayenv_test$estimate
+  
+}# end loop
+
+
+# With 22 variables and two types we'll take an alpha of (0.05/44)
+0.05/22
+# To compare to our log10-transformed P-values:
+(alpha <- log10(0.05/44))
+
+binom_result.df$binom.raw.sig <- binom_result.df$binom.raw.P < alpha
+
+binom_result.df$binom.bay.sig <- binom_result.df$binom.bay.P < alpha
+
+
+binom_result.df[,3:7] <- round(binom_result.df[,3:7], 2)
+binom_result.df$env <- sub("_raw_rho","",binom_result.df$env)
+binom_result.df
+write.csv(binom_result.df, file = "../results/binom_results.csv")
+```
+
+The binomial test confirms our visual inspection of the data. In most cases the significance of the result before and after corecting for population structure is the same, except for SHM.
+
+A binomial estimate > 0.50 means the SNPs fall into the 1st and 3rd quadrants in the MAT-MAP comparison. This is the Freezing Group:
+
+LAT, MAT, MCMT, TD, DD_0, NFFD, eFFP, EMT
+
+A binomial estimate < 0.50 means the SNPs fall into the 2nd and 4th quadrants in the MAT-MAP comparison. This is the Aridity Group:
+
+MSP, AHM, EXT, CMD
+
+SHM was removed based on inconsitency in the binomial test before and after correction for structure.
+
+Based on the binomal test, Eref should stay in the Aridity Group. However Eref was kept a separate group, because outliers SNPs in this variable visually are adapting along both axes.
+
+## Subset the SNPs into 4 groups: Freezing, Aridity, Eref, and others
+
+### Freezing Group
+```{r}
+Freezing.cols <- colnames(is.superdf) %in% c(
+                                          "LAT_raw_rho",
+                                          "MAT_raw_rho",
+                                          "MCMT_raw_rho",
+                                          "TD_raw_rho",
+                                          "DD_0_raw_rho",
+                                          "NFFD_raw_rho", 
+                                          "eFFP_raw_rho", 
+                                          "EMT_raw_rho")
+which(Freezing.cols)
+FreezingSNPs.df <- superdf[rowSums(is.superdf[,Freezing.cols],na.rm = TRUE)>0,]
+
+  ## Num SNPs
+  nrow(FreezingSNPs.df)
+  length(unique(FreezingSNPs.df$gcontig__gcontig_pos))
+  
+  write.csv(data.frame(FreezingSNPs.df$gcontig__gcontig_pos, FreezingSNPs.df$gtcontig), file = "../results/FreezingGroup.csv")
+  
+  ## Num Contigs
+   length(levels(factor(FreezingSNPs.df$gtcontig)))
+   length(unique(FreezingSNPs.df$gtcontig))
+
+ ### Logical Freezing Group
+  results_pine3$Freezing_logical <- results_pine3$gcontig__gcontig_pos %in% FreezingSNPs.df$gcontig__gcontig_pos
+  
+  ### Sanity check - number of SNPs in Group 1 the same
+  sum(results_pine3$Freezing_logical)
+  
+  ### Sanity check - number of contigs in Group 1 the same
+  length(levels(factor(results_pine3$gtcontig[results_pine3$Freezing_logical])))
+  
+  Freezing_hist <- sort(table(results_pine3$gtcontig[results_pine3$Freezing_logical]),decreasing = TRUE)
+  
+  barplot(Freezing_hist, xlab="Contig", ylab="Number of SNPs", main="Freezing group: 113 top SNPs in 33 contigs", las=2, cex.names=0.3)
+  
+  top_contigs_freezing <- names(Freezing_hist)
+
+  # Which top contigs also in Yeaman 2016?
+  top_contigs_freezing[which(top_contigs_freezing %in% sy$V1)]
+```
+
+
+### Aridity Group
+```{r}
+Aridity.cols <- colnames(is.superdf) %in% c(
+                                          "MSP_raw_rho",
+                                          "AHM_raw_rho",
+                                          "EXT_raw_rho",
+                                          "CMD_raw_rho")
+which(Aridity.cols)
+AriditySNPs.df <- superdf[rowSums(is.superdf[,Aridity.cols],na.rm = TRUE)>0,]
+
+  ## Num SNPs
+  nrow(AriditySNPs.df)
+  length(unique(AriditySNPs.df$gcontig__gcontig_pos))
+  
+  ## Num Contigs
+  length(levels(factor(AriditySNPs.df$gtcontig)))
+  length(unique(AriditySNPs.df$gtcontig))
+  
+ ### Logical Freezing Group
+  results_pine3$Aridity_logical <- results_pine3$gcontig__gcontig_pos %in% AriditySNPs.df$gcontig__gcontig_pos
+  
+  write.csv(data.frame(AriditySNPs.df$gcontig__gcontig_pos, AriditySNPs.df$gtcontig), file = "../results/AridityGroup.csv")
+  
+  ### Sanity check - number of SNPs in Group 1 the same
+  sum(results_pine3$Aridity_logical)
+  
+  ### Sanity check - number of contigs in Group 1 the same
+  length(levels(factor(results_pine3$gtcontig[results_pine3$Aridity_logical])))
+  
+  Aridity_hist <- sort(table(results_pine3$gtcontig[results_pine3$Aridity_logical]),decreasing = TRUE)
+  
+  barplot(Aridity_hist, xlab="Contig", ylab="Number of SNPs", main="Aridity group: 152 top SNPs in 38 contigs", las=2, cex.names=0.3)
+  
+  top_contigs_aridity <- names(Aridity_hist)
+
+  # Which top contigs also in Yeaman 2016?
+  top_contigs_aridity[which(top_contigs_aridity %in% sy$V1)]
+```
+
+### Evaporation group (Eref)
+```{r}
+
+Eref.cols <- colnames(is.superdf) %in% c("Eref_raw_rho")
+which(Eref.cols)
+ind <- which(is.superdf[,Eref.cols]==TRUE)
+ErefSNPs.df <- superdf[ind,]
+
+## Num SNPs
+  nrow(ErefSNPs.df)
+  length(unique(ErefSNPs.df$gcontig__gcontig_pos))
+  
+  ## Num Contigs
+  length(levels(factor(ErefSNPs.df$gtcontig)))
+  length(unique(ErefSNPs.df$gtcontig)) 
+
+ ### Logical Evaporation Group
+  results_pine3$Eref_logical <- results_pine3$gcontig__gcontig_pos %in% ErefSNPs.df$gcontig__gcontig_pos
+  
+  ### Sanity check - number of SNPs in Group 1 the same
+  sum(results_pine3$Eref_logical)
+  
+  ### Sanity check - number of contigs in Group 1 the same
+  length(levels(factor(results_pine3$gtcontig[results_pine3$Eref_logical])))
+  
+  Eref_hist <- sort(table(results_pine3$gtcontig[results_pine3$Aridity_logical]),decreasing = TRUE)
+  
+  barplot(Eref_hist, xlab="Contig", ylab="Number of SNPs", main="Eref group: 100 top SNPs in 26 contigs", las=2, cex.names=0.3)
+  
+  top_contigs_aridity <- names(Aridity_hist)
+
+  # Which top contigs also in Yeaman 2016?
+  top_contigs_aridity[which(top_contigs_aridity %in% sy$V1)]
+```
+
+Compare Freezing and Aridity Groups
+```{r}
+pdf(file = "../results/TempVsAridity_inMATvMAP.pdf", width=7, height=12)
+
+par(mfrow=c(2,1), mar=c(4,4,1,1))
+plot2Dcov(x=results_pine3$MAT_rhoave,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "MAT rho Bayenv", 
+       ylab= "MAP rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub_orange=results_pine3$MAT_rhoave[results_pine3$Freezing_logical], 
+       y_sub_orange=results_pine3$MAP_rhoave[results_pine3$Freezing_logical],
+       x_sub_blue=results_pine3$MAT_rhoave[results_pine3$Aridity_logical], 
+       y_sub_blue=results_pine3$MAP_rhoave[results_pine3$Aridity_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+plot2Dcov(x=results_pine3$MAT_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "MAT rho raw", 
+       ylab= "MAP rho raw" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub_orange=results_pine3$MAT_raw_rho[results_pine3$Freezing_logical], 
+       y_sub_orange=results_pine3$MAP_raw_rho[results_pine3$Freezing_logical],
+       x_sub_blue=results_pine3$MAT_raw_rho[results_pine3$Aridity_logical], 
+       y_sub_blue=results_pine3$MAP_raw_rho[results_pine3$Aridity_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+
+par(mfrow=c(2,1), mar=c(4,4,1,1))
+plot2Dcov(x=results_pine3$MAT_rhoave,
+       y=results_pine3$MAP_rhoave, 
+       xlab= "MAT rho Bayenv", 
+       ylab= "MAP rho Bayenv" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+       x_sub_green=results_pine3$MAT_rhoave[results_pine3$Group1_logical & !results_pine3$Freezing_logical & !results_pine3$Aridity_logical], 
+       y_sub_green=results_pine3$MAP_rhoave[results_pine3$Group1_logical & !results_pine3$Freezing_logical & !results_pine3$Aridity_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+plot2Dcov(x=results_pine3$MAT_raw_rho,
+       y=results_pine3$MAP_raw_rho, 
+       xlab= "MAT rho raw", 
+       ylab= "MAP rho raw" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+ x_sub_green=results_pine3$MAT_raw_rho[results_pine3$Group1_logical & !results_pine3$Freezing_logical & !results_pine3$Aridity_logical], 
+       y_sub_green=results_pine3$MAP_raw_rho[results_pine3$Group1_logical & !results_pine3$Freezing_logical & !results_pine3$Aridity_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+par(mfrow=c(2,1), mar=c(4,4,1,1))
+  barplot(Freezing_hist, xlab="Contig", ylab="Number of SNPs", main="Freezing group: 113 top SNPs in 33 contigs", las=2, cex.names=0.3)
+  
+  barplot(Aridity_hist, xlab="Contig", ylab="Number of SNPs", main="Aridity group: 151 top SNPs in 37 contigs", las=2, cex.names=0.3)
+dev.off()
+```
+
+## Create Venn Tables
+```{r}
+install.packages("VennDiagram")
+source("http://www.bioconductor.org/biocLite.R")
+biocLite("limma")
+
+require(VennDiagram)
+require(limma)
+
+limit.df <- results_pine3[results_pine3$Group1_logical,]
+dim(limit.df)
+
+### Overlap among SNPs
+a<- vennCounts(cbind(limit.df$Freezing_logical, limit.df$Aridity_logical, limit.df$Eref_logical))
+a
+vennDiagram(a, names=c("Freezing", "Aridity", "Evaporation"), main = "Overlap among SNPs")
+
+limit.df$gtcontig[limit.df$Eref_logical & !limit.df$Freezing_logical & !limit.df$Aridity_logical]
+
+### Overlap among contigs
+contig.group.df <- data.frame(
+  Freezing = table(limit.df$gtcontig,limit.df$Freezing_logical)[,2],
+  Evap = table(limit.df$gtcontig,limit.df$Eref_logical)[,2],
+  Aridity = table(limit.df$gtcontig,limit.df$Aridity_logical)[,2],
+  Total_InFA = table(limit.df$gtcontig,limit.df$Aridity_logical | limit.df$Freezing_logical)[,2]
+)
+
+contig.group.df$index=1:nrow(contig.group.df)
+
+contig.group.df<- contig.group.df[order(contig.group.df$Freezing, contig.group.df$Aridity, contig.group.df$Evap, decreasing=TRUE),]
+
+contig.group.df
+colSums(contig.group.df)
+
+## Venn for overlap among contigs
+b<- vennCounts(as.matrix(contig.group.df[,c(1,3,2)]>0))
+vennDiagram(b, names=c("Freezing", "Aridity", "Evaporation"), main = "Overlap among contigs")
+
+## To do: Some kind of Venn bar chart 
+### will need Freezing & Evap, Evap & Arid, and Freezing & Arid to draw
+# Freezing: rows 1:7 and 12:33
+# Both: Rows 9:11
+# Arid: Rows 8 and 34:end
+
+
+```
+
+### Pine Venn
+```{r}
+fcbg <- adjustcolor("lightblue", 0.7)
+fcline <- adjustcolor("blue", 0.7)
+pcha <- 24
+cex=0.8
+
+acbg <- adjustcolor("orange", 0.7)
+acline <- adjustcolor("brown", 0.5)
+
+bothbg <- adjustcolor("purple", 0.7)
+
+pdf("../results/PineVenn.pdf",width=7, height=4)
+  par(mar=c(1,1,0,0))
+  plot(NA, NA, xaxt="n", yaxt="n", bty="n", xlim=c(0,100), ylim=c(0,40), xlab="", ylab="")
+  
+  ### Temperature group
+  ### Centered on 22
+  points(1:45-0.5, rep(1, 45), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+    # 1 of these is both
+    points(46-0.5, 1, col= fcline, bg=bothbg, pch=pcha, cex=ces)
+  
+  points(1:17+12, rep(2, 17), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+    # 2 of these are both
+    points(18:19+12, rep(2, 2), col= fcline, bg=bothbg, pch=pcha, cex=ces)
+  
+  points(1:13+15, rep(3, 13), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+  
+  points(1:3+20, rep(4, 3), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+  
+  points(1:2+20.5, rep(5, 2), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+  
+  points(1:2+20.5, rep(6, 2), col= fcline, bg=fcbg, pch=pcha, cex=ces)
+  
+  points(rep(22, 21), 1:21+6, col= fcline, bg=fcbg, pch=pcha, cex=ces)
+  
+  ### Both
+  ### Centered on 55
+  # 1 freez + 3 arid
+    points(53.5, 1, col= fcline, bg=fcbg, pch=pcha, cex=ces)
+    points(54.5:56.5, rep(1,3), col= acline, bg=acbg, pch=pcha, cex=ces)
+  # 1 both + 1 Arid
+    points(54.5, 2, col= fcline, bg=bothbg, pch=pcha, cex=ces)
+    points(55.5, 2, col= acline, bg=acbg, pch=pcha, cex=ces)
+  # 1 both
+    points(55, 3, col= fcline, bg=bothbg, pch=pcha, cex=ces)
+  
+  ### Aridity group
+  plot_arid <- function(n, row, col, bg){
+    if (n%%2==0){
+      points(1:n+80-n/2-0.5, rep(row, n), col= col, bg=bg, pch=pcha, cex=0.8)
+      }else{
+      points(1:n+80-ceiling(n/2), rep(row, n), col= col, bg=bg, pch=pcha, cex=0.8)
+      }
+  }
+  
+  ### Centered on 80
+  ## 32
+  plot_arid(32, 1, acline, acbg)
+  ## 11
+  plot_arid(11, 2, acline, acbg)
+  ## 11
+  plot_arid(11, 3, acline, acbg)
+  ## 9
+  plot_arid(9, 4, acline, acbg)
+  ## 8
+  plot_arid(8, 5, acline, acbg)
+  ## 7
+  plot_arid(7, 6, acline, acbg)
+  
+  ## 7 (1 of these is both)
+  points(1:6+80-4, rep(7, 6), col= acline, bg=acbg, pch=pcha, cex=0.8)
+  points(7+80-4, rep(7, 1), col= fcline, bg=bothbg, pch=pcha, cex=0.8)
+  
+  ## 6
+  plot_arid(6, 8, acline, acbg)
+  
+  ## 3 rows of 5
+  plot_arid(5, 9, acline, acbg)
+  plot_arid(5, 10, acline, acbg)
+  plot_arid(5, 11, acline, acbg)
+  
+  ## 4
+  plot_arid(4, 12, acline, acbg)
+  
+  ## 5 rows of 3
+  plot_arid(3, 13, acline, acbg)
+  plot_arid(3, 14, acline, acbg)
+  plot_arid(3, 15, acline, acbg)
+  plot_arid(3, 16, acline, acbg)
+  plot_arid(3, 17, acline, acbg)
+  
+  ## 2 rows of 2
+  plot_arid(2, 18, acline, acbg)
+  plot_arid(2, 19, acline, acbg)
+  
+  ## sum(contig.group.df$Aridity==1)
+  ## 15 rows of 1
+  points(rep(80,15), 20:34, col= acline, bg=acbg, pch=pcha, cex=0.8)
+  
+  legend(50, 15, legend=c("Freezing", "Both", "Aridity"), pch=24, col = c("blue", "blue", "brown"), pt.bg=c("lightblue", "purple", "orange"), bty="n")
+  
+  mtext("Freezing", side = 1, line=-1, adj=0.21)
+  
+  mtext("Both", side = 1, line=-1, adj=0.55)
+  
+  mtext("Aridity", side = 1, line=-1, adj=0.80)
+dev.off()
 ```

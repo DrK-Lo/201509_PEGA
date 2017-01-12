@@ -6,6 +6,37 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+## Jan 10, 2017 results/1groupingVisualizations.pdf
+So, A couple of follow ups on the galaxy plots:
+
+1) I’ve been cleaning up the code from the ground up to make sure that I am grouping the SNPs as best as possible.
+
+First, I start with Sam’s super contigs at 10^-9, which gives me 321 contigs.
+From this set of 12731 SNPs in 321 contigs, I then identified the SNPs with values above 0.999 quantile of (uncorrected) Spearman’s ρ  between SNP frequency and any environmental or phenotypic variable, which resulted in 359 SNPs in 107 contigs. Of these 107 contigs, 14 were in Sam’s top 25 list for convergence candidates from yeaman et al 2016. 
+
+2) The next step is to use data visualization to determine which environmental variables, if any, can explain the weird pattern that I see at the outlier SNPs in these 107 contigs in the MAT-MAP comparison (attached, 1st plot). I built a loop to go through each environmental variable, identify the outlier SNPs above the 99.9% threshold in that variable, and then plotted their location in the MAP-MAT comparison (remaining pages in pdf). 
+
+This pretty clearly shows that one group is explained by freezing (former TEMPERATURE group, going to rename FREEZING group):
+LAT
+MAT Mean annual temperature (C)
+MCMT Mean coldest month temperature
+TD Temperature difference (MWMT - MCMT)
+DD_0 Degree-days below 0C
+NFFD Number of frost-free days
+eFFP Day of the year frost-free period ends
+EMT Extreme minimum temperature over 30 years
+
+The second group is largely explained by moisture (former PRECIPITATION group, rename to something else? I feel like these variables are measuring more the ratio of evaporation/heat to moisture, rather than precipitation itself)
+AHM Annual heat-moisture index (ratio of temp to precipitation)
+CMD Hargreaves climatic moisture deficit (mm)
+(lesser so by other precipitation variables)
+(I remember now that I added MAP to this list because it didn’t affect the groupings and it made the results easier to interpret, but I’m going to leave it out and re-run the groups for the listings in the above variables.)
+
+Possible 3rd group:
+
+NOW, Eref (Hargreaves reference evaporation (mm)) is a VERY interesting variable, because the SNPs that are outliers in that variable show both groups of behavior (see page 22 in the pdf). Any ideas on why this might be??? I might add this to the analysis as a third group?
+
+
 
 ## Jan 10, 2017
 Have been getting a lot of feedback from Sam, Kay and Sally A. over the last few weeks on the approach and the manuscript.
