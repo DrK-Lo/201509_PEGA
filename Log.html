@@ -124,7 +124,22 @@ $(document).ready(function () {
 </div>
 
 
-<p>This log is in Blog-style format (newest at top) ## Jan 10, 2017 results/1groupingVisualizations.pdf So, A couple of follow ups on the galaxy plots:</p>
+<p>This log is in Blog-style format (newest at top)</p>
+<div id="jan-14-2017" class="section level2">
+<h2>Jan 14, 2017</h2>
+<p>I have completely revised the methods and about half the results. The major change has been in the criteria that I was using to obtain outlier SNPs - using the new criteria is more in line with what Sam did in the Science paper and should also give more similar results to what Jeremy is getting with the array data. This changes a lot of the details of the results but not the big picture. Other major changes include doing all the stats to justify the groupings and adding background about the galaxy plot concept.</p>
+<p><a href="https://docs.google.com/document/d/1FIr4OqOzoI7_hJGH59fmHwhuah-Ov1N7KMCNZ6XAcM0/edit#" class="uri">https://docs.google.com/document/d/1FIr4OqOzoI7_hJGH59fmHwhuah-Ov1N7KMCNZ6XAcM0/edit#</a></p>
+<p>The next major steps are to:</p>
+<ol style="list-style-type: decimal">
+<li><p>Choose ~10-20 top SNPs for Jon to plot on the landscape - I could use some feedback on how to choose these. Jon can also plot a composite allele frequency, but I think that would involve re-coding all the alleles so they are in low frequency in one type of environment and high frequency in another type of environment.</p></li>
+<li><p>Confirm with Mike W that the bootstrap approach for significance testing of the covariance is statistically valid.</p></li>
+<li><p>Redo the annotations and GO enrichment with the new list of outliers.</p></li>
+</ol>
+<p>Thanks guys! I’ve got a lot of momentum with this right now and I think it’s finally coming together…</p>
+</div>
+<div id="jan-10-2017-results1groupingvisualizations.pdf" class="section level2">
+<h2>Jan 10, 2017 results/1groupingVisualizations.pdf</h2>
+<p>So, A couple of follow ups on the galaxy plots:</p>
 <ol style="list-style-type: decimal">
 <li>I’ve been cleaning up the code from the ground up to make sure that I am grouping the SNPs as best as possible.</li>
 </ol>
@@ -136,6 +151,7 @@ $(document).ready(function () {
 <p>The second group is largely explained by moisture (former PRECIPITATION group, rename to something else? I feel like these variables are measuring more the ratio of evaporation/heat to moisture, rather than precipitation itself) AHM Annual heat-moisture index (ratio of temp to precipitation) CMD Hargreaves climatic moisture deficit (mm) (lesser so by other precipitation variables) (I remember now that I added MAP to this list because it didn’t affect the groupings and it made the results easier to interpret, but I’m going to leave it out and re-run the groups for the listings in the above variables.)</p>
 <p>Possible 3rd group:</p>
 <p>NOW, Eref (Hargreaves reference evaporation (mm)) is a VERY interesting variable, because the SNPs that are outliers in that variable show both groups of behavior (see page 22 in the pdf). Any ideas on why this might be??? I might add this to the analysis as a third group?</p>
+</div>
 <div id="jan-10-2017" class="section level2">
 <h2>Jan 10, 2017</h2>
 <p>Have been getting a lot of feedback from Sam, Kay and Sally A. over the last few weeks on the approach and the manuscript.</p>

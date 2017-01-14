@@ -6,6 +6,9 @@ output: html_document
 ---
 
 This script "flips" all the SNP effects so they are alphabetical (SNP with first letter in the alphabet is coded 0? or 1?).
+
+SOME ISSUES: P-VALUES ARE FLIPPED
+THIS SCRIPT USES AN OLD LIST OF SAM'S CONTIGS - CAN TAKE OUT
     
 #### Note
 Note that the code runs fastest if you work through R in a terminal window and upload the "results_pine" object first.  Once it is uploaded, when the markdown is created it won't try to load the "results_pine" dataframe, which is very large.  To make this markdown file:

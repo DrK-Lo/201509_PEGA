@@ -6,6 +6,24 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+
+## Jan 14, 2017
+
+I have completely revised the methods and about half the results. The major change has been in the criteria that I was using to obtain outlier SNPs - using the new criteria is more in line with what Sam did in the Science paper and should also give more similar results to what Jeremy is getting with the array data. This changes a lot of the details of the results but not the big picture.
+Other major changes include doing all the stats to justify the groupings and adding background about the galaxy plot concept.
+
+https://docs.google.com/document/d/1FIr4OqOzoI7_hJGH59fmHwhuah-Ov1N7KMCNZ6XAcM0/edit#
+
+The next major steps are to:
+
+1) Choose ~10-20 top SNPs for Jon to plot on the landscape - I could use some feedback on how to choose these. Jon can also plot a composite allele frequency, but I think that would involve re-coding all the alleles so they are in low frequency in one type of environment and high frequency in another type of environment.
+
+2) Confirm with Mike W that the bootstrap approach for significance testing of the covariance is statistically valid.
+
+3) Redo the annotations and GO enrichment with the new list of outliers.
+
+Thanks guys! I’ve got a lot of momentum with this right now and I think it’s finally coming together...
+
 ## Jan 10, 2017 results/1groupingVisualizations.pdf
 So, A couple of follow ups on the galaxy plots:
 
