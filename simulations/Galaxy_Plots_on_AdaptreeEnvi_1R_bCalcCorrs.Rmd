@@ -1,0 +1,446 @@
+---
+title: "Galaxy_Plots_on_AdaptreeEnvi_1R_CalcCorrs"
+author: "Katie Lotterhos"
+date: "1/19/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!("ggplot2" %in% installed.packages())){install.packages("ggplot2")}
+if(!("gstat" %in% installed.packages())){install.packages("gstat")}
+if(!("sp" %in% installed.packages())){install.packages("sp")}   
+if(!("maptools" %in% installed.packages())){install.packages("maptools")} 
+if(!("ncf" %in% installed.packages())){install.packages("ncf")}   
+
+source("https://bioconductor.org/biocLite.R")
+biocLite("graph", suppressUpdates = TRUE)   
+biocLite("Rgraphviz", suppressUpdates = TRUE)
+biocLite("RBGL", suppressUpdates = TRUE)
+install.packages("gRain", dependencies = TRUE)
+install.packages("bnlearn")
+
+library(ggplot2)
+library(gstat)
+library(sp)
+library(maptools)
+library(ncf)
+
+
+library(graph)
+library(Rgraphviz)
+library(RBGL)
+library(gRain)
+library(bnlearn)
+```
+
+# example bayesian network
+```{r}
+a<- matrix(sample(c(1, 0), 15, TRUE), nrow=5, ncol=3)
+bn_df <- data.frame(a)
+head(bn_df)
+res <- hc(bn_df)
+res
+plot(res)
+```
+
+
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/simulations/")
+
+### Load data
+```{r}
+### envi
+env <- read.table("data/results_AdaptreeEnviFor_R90.txt", header=TRUE)
+names(env)
+names(env)[13] <- "MAP"
+names(env)[14] <- "MSP"
+
+### Simulations
+#snps <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.lfmm")
+#env_sim <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.env")
+#df <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20Bayenv2LFMMpca.Cpval", header=TRUE)
+
+snps1R <- read.table("data/LW2015data/1R_R90_1351142970_988_5_NumPops=90_NumInd=20.lfmm")
+env_sim1R <- read.table("data/LW2015data/1R_R90_1351142970_988_5_NumPops=90_NumInd=20.env")
+df1R <- read.table("data/LW2015data/1R_R90_1351142970_988_5_NumPops=90_NumInd=20Bayenv2LFMMpca.Cpval", header=TRUE)
+
+snps2R <- read.table("data/LW2015data/2R_R90_1351142970_988_6_NumPops=90_NumInd=20.lfmm")
+env_sim2R <- read.table("data/LW2015data/2R_R90_1351142970_988_6_NumPops=90_NumInd=20.env")
+df2R <- read.table("data/LW2015data/2R_R90_1351142970_988_6_NumPops=90_NumInd=20Bayenv2LFMMpca.Cpval", header=TRUE)
+
+identical(env_sim1R, env_sim2R) #good
+
+env$SimEnv <- env_sim1R[seq(1,1800, by=20),1]
+
+par(mfrow=c(1,1))
+plot(env$Y_Pops, env$SimEnv)
+  abline(lm(env$SimEnv~env$Y_Pops))
+plot(env$Y_Pops, env$MAT)
+  abline(lm(env$MAT~env$Y_Pops))
+plot(env$X_Pops, env$MAT)
+  abline(lm(env$MAT~env$X_Pops))
+
+plot(env$X_Pops, env$SimEnv)
+```
+
+
+### Compare correlations with simulated environment
+```{r}
+head(env)
+cor.with.sim <- cor(env$SimEnv, env[,c(2:3, 8:27)], method="spearman")
+cor.with.sim
+```
+
+The correlations between the adaptree environment and the simulated environment are quite low.
+
+### Calculate rho
+
+Create a matrix to hold Spearman's rho and another matrix to hold $P$-values, where each row is a SNP and each column is an environmental variable
+
+```{r}
+
+### Create environment matrix for individual data
+env2 <- matrix(NA, nrow(snps1R), 23) #hard coding
+k=0
+env_cols <- c(2:3, 8:28) #hard coding
+for (i in env_cols){
+  k=k+1
+  env2[,k] <- rep(env[,i], each=20)
+}
+dim(env2)
+colnames(env2) <- names(env)[env_cols]
+head(env2)
+
+### Create matrix for results
+TrueEnv.rho1R <- TrueEnv.P1R <- matrix(NA, ncol(snps1R), ncol(env2))
+TrueEnv.rho2R <- TrueEnv.P2R <- matrix(NA, ncol(snps2R), ncol(env2))
+colnames(TrueEnv.rho1R) <- names(env)[env_cols]
+colnames(TrueEnv.rho2R) <- names(env)[env_cols]
+colnames(TrueEnv.P1R) <- names(env)[env_cols]
+colnames(TrueEnv.P2R) <- names(env)[env_cols]
+
+for (j in 1:ncol(env2)){
+  print(colnames(env2)[j])
+  for (i in 1:ncol(snps2R)){
+    if(i<=ncol(snps1R)){
+      test1R <- cor.test(snps1R[,i], env2[,j], method="spearman", exact=FALSE)
+      TrueEnv.rho1R[i,j] <- test1R$estimate
+      TrueEnv.P1R[i,j] <- test1R$p.value
+    }
+    
+    test2R <- cor.test(snps2R[,i], env2[,j], method="spearman", exact=FALSE)
+    TrueEnv.rho2R[i,j] <- test2R$estimate
+    TrueEnv.P2R[i,j] <- test2R$p.value
+  }
+}
+```
+
+### Get indices of neutral and selected SNPs
+(not shown)
+```{r, echo=FALSE}
+Neut1R = df1R$s_high==0 & df1R$UseSNP==TRUE
+sum(Neut1R)
+Neut2R = df2R$s_high==0 & df2R$UseSNP==TRUE
+sum(Neut2R)
+
+Sel1R = df1R$s_high>0 & df1R$UseSNP==TRUE
+sum(Sel1R)
+#which(Sel1R)
+Sel2R = df2R$s_high>0 & df2R$UseSNP==TRUE
+sum(Sel2R)
+#which(Sel2R)
+
+Neut_ind <- 1:9900
+Sel_ind1R <- 9901:ncol(snps1R)
+Sel_ind2R <- 9901:ncol(snps2R)
+```
+
+
+### How many are significant
+
+I determined which loci were "outliers" by the criteria that they had to have p-values from Spearman's rho less than expected by Bonferroni correction.
+
+
+#### False positives and true positives
+
+```{r}
+(Bonferroni_P_N <- -log10(0.05/(10000*22)))
+
+
+
+### Number false positives in landscape sims
+numFPPerEnv1R<-colSums(-log10(TrueEnv.P1R[Neut_ind,])>Bonferroni_P_N)
+numFPPerEnv2R<-colSums(-log10(TrueEnv.P2R[Neut_ind,])>Bonferroni_P_N)
+
+
+### Number true positives in landscape sims
+numTPPerEnv1R <- colSums(-log10(TrueEnv.P1R[Sel_ind1R,])>Bonferroni_P_N)
+  #(total selected loci in this dataset is 96)
+numTPPerEnv2R <- colSums(-log10(TrueEnv.P2R[Sel_ind2R,])>Bonferroni_P_N, na.rm=TRUE)
+
+
+
+cbind(numFPPerEnv1R, numFPPerEnv2R, numTPPerEnv1R, numTPPerEnv2R)
+  # The false positive rate is really high in the simulated environment. Not sure why that is. It is true for the IBD sims, but not for the IM sims, which makes me think it has something to do with the scale of autocorrelation in the environment I simulated.
+
+(order <- match(c("Y_Pops", "FFP", "MAP", "MWMT", "bFFP", "PAS", "X_Pops", "EMT", "MCMT", "TD", "DD0", "Elevation", "MAT", "eFFP", "NFFD", "DD5", "CMD", "Eref", "AHM", "MSP", "EXT", "SHM"), names(numFPPerEnv1R)))
+
+```
+
+### Clustering plots
+
+```{r}
+MakePlotDefault <- function(out,demog){
+  sel_index <- length(which(out))-sum(which(out)>9900)+1 #index after which all under selection
+  if(demog=="1R"){forh1R <- TrueEnv.rho1R[out, 1:22]}
+  if(demog=="2R"){forh1R <- TrueEnv.rho2R[out, 1:22]}
+  #tail(forh1R, 60)
+  print(dim(forh1R))
+  h1R <- hclust(dist(abs(forh1R)))
+  #plot(h1R)
+  
+  # default clustering
+  superheat(t(abs(forh1R)), 
+          order.rows= rev(env_clust$rowInd),
+          order.cols = h1R$order,
+          heat.pal = (brewer.pal(5, "Blues")), heat.na.col = "white",
+          col.dendrogram = T, row.dendrogram = TRUE,
+          heat.lim = c(0,0.6),
+          left.label.size = 0.45)
+}
+
+MakePlotOrdered <- function(out, demog){
+  sel_index <- length(which(out))-sum(which(out)>9900)+1 #index after which all under selection
+  if(demog=="1R"){forh1R <- TrueEnv.rho1R[out, 1:22]}
+  if(demog=="2R"){forh1R <- TrueEnv.rho2R[out, 1:22]}
+  #tail(forh1R, 60)
+  print(dim(forh1R))
+  h1R <- hclust(dist(abs(forh1R)))
+  #plot(h1R)
+  # superheat with columns ordered by selected or neutral
+  superheat(t(abs(forh1R)), 
+         order.rows= rev(env_clust$rowInd),
+          order.cols = 1:nrow(forh1R),
+          heat.pal = (brewer.pal(5, "Blues")), heat.na.col = "white",
+          col.dendrogram = T, row.dendrogram = TRUE,
+          heat.lim = c(0,0.6),
+          left.label.size = 0.45)
+}
+
+### All 1R 
+  out <- rowSums(-log10(TrueEnv.P1R[,1:22])>Bonferroni_P_N)>0
+  MakePlotDefault(out, "1R")
+  MakePlotOrdered(out, "1R")
+### Neut 1R 
+  out <- rowSums(-log10(TrueEnv.P1R[Neut_ind,1:22])>Bonferroni_P_N)>0
+  MakePlotDefault(out, "1R")
+### All 2R 
+  out <- rowSums(-log10(TrueEnv.P2R[,1:22])>Bonferroni_P_N)>0
+  MakePlotDefault(out, "2R")
+  MakePlotOrdered(out, "2R")
+### Neut 2R 
+  out <- rowSums(-log10(TrueEnv.P2R[Neut_ind,1:22])>Bonferroni_P_N)>0
+  MakePlotDefault(out, "2R")
+
+```
+
+```{r}
+```
+
+```{r}
+### Barplot of FP vs. True Positives
+  pdf(paste("results/1R_2R_FPvsTPBarplot_Bonf",round(Bonferroni_P_N ,2),".pdf", sep=""), width=7, height=8)
+    par(mfrow=c(2,1), mar=c(6,4,0.5,0.5))
+    barplot(rbind(c(numFPPerEnv1R[order]), numTPPerEnv1R[order]), las=2, ylab="Number of outlier loci", ylim=c(0,100))
+    legend(17,90, c("# False positives", "# True positives"), fill=c("grey30", "grey70"), bty="n")
+    text(0, 90, "A) One refuge model", adj=0)
+    
+    barplot(rbind(c(numFPPerEnv2R[order]), numTPPerEnv2R[order]), las=2, ylab="Number of outlier loci", ylim=c(0,100))
+    text(0, 90, "B) Two refugia model", adj=0)
+    dev.off()
+```
+
+```{r}
+### Plot FP vs. TP as a function of correlation with the simulated environment
+  pdf(paste("results/1R_2R_ScatterCorrWSimEnv_VsNumOut_Bonf",round(Bonferroni_P_N ,2),".pdf", sep=""), width=7, height=5)
+  par(mfcol=c(2,2), mar=c(4,6,0.5,1), oma=c(0,0,3,0))
+  plot(abs(cor.with.sim), numFPPerEnv1R[1:22], ylab="Number of false positives\nin focal environment", bty="l", xlab="", ylim=c(0,30))
+  fplm <- lm(as.numeric(numFPPerEnv1R[1:22]) ~ as.numeric(abs(cor.with.sim)))
+  summary(fplm)
+  #abline(fplm)
+
+  plot(abs(cor.with.sim), numTPPerEnv1R[1:22], ylab="Number of true positives\nin focal environment", bty="l", xlab="Correlation of focal environment\nwith selective environment", ylim=c(0,60))
+    tplm <- lm(as.numeric(numTPPerEnv1R[1:22]) ~ as.numeric(abs(cor.with.sim)))
+  summary(tplm)
+  abline(tplm)
+  text(0,)
+  
+   plot(abs(cor.with.sim), numFPPerEnv2R[1:22], ylab="Number of false positives\nin focal environment", bty="l", xlab="", ylim=c(0,30))
+  fplm <- lm(as.numeric(numFPPerEnv2R[1:22]) ~ as.numeric(abs(cor.with.sim)))
+  summary(fplm)
+  #abline(fplm)
+
+  plot(abs(cor.with.sim), numTPPerEnv2R[1:22], ylab="Number of true positives\nin focal environment", bty="l", xlab="Correlation of focal environment\nwith selective environment", ylim=c(0,60))
+  tplm <- lm(as.numeric(numTPPerEnv2R[1:22]) ~ as.numeric(abs(cor.with.sim)))
+  summary(tplm)
+  abline(tplm)
+  
+  mtext("A) One refuge model", side=3, outer=TRUE, ad=0.25)
+  mtext("B) Two refugia model", side=3, outer=TRUE, ad=0.87)
+  dev.off()
+```
+
+
+The next step mimics what we did in the real data, which is to call a locus an outlier if it is an outlier in any one environmental variable.
+
+```{r}
+## 1R
+  ### Get significance based on outlierliness in 22 measured variables (ignore unknown SimEnv)
+  Is.Sig1R <- -log10(TrueEnv.P1R)>Bonferroni_P_N
+  dim(Is.Sig1R)
+  colnames(TrueEnv.P1R)
+  colnames(Is.Sig1R)
+  # As a first pass, we call a snp an outlier if it is an outlier in any one environmental variable (excluding the simulated environment)
+  Is.Out1R <- (rowSums(Is.Sig1R[,1:22])>0)
+  # The number of "outliers" that are neutral without knowing selective environment:
+  sum(Is.Out1R[Neut_ind])
+  # Number of "outliers" that are under selection without knowing selective environment:
+  sum(Is.Out1R[Sel_ind1R])
+
+## 2R
+  Is.Sig2R <- -log10(TrueEnv.P2R)>Bonferroni_P_N
+  Is.Out2R <- (rowSums(Is.Sig2R[,1:22])>0)
+  sum(Is.Out2R[Neut_ind])
+  sum(Is.Out2R[Sel_ind2R])
+```
+
+
+### Galaxy plots
+
+```{r}
+## 
+MakePlot <- function(){
+  Is.OutCol <- rep(adjustcolor("grey",0.2), length(Is.Out))
+  Is.OutCol[which(Is.Out[Neut_ind] > 0)] <- adjustcolor("red", 0.5)
+  Is.OutCol[Sel_ind] <- "grey70"
+  Is.OutCol[Sel_ind[which(Is.Out[Sel_ind] > 0)]] <- "blue"
+  Is.Outpch <- rep(19, length(Is.Out))
+  Is.Outpch[Sel_ind] <- 25
+  #Is.Outpch[Sel_ind[which(Is.Out[Sel_ind] > 0)]] <- 25
+  #tail(cbind(Is.Outpch, Is.OutCol),100)
+  
+  TrueEnv.rho <- data.frame(TrueEnv.rho)
+  TrueEnv.rho$Is.Out <- Is.Out
+  TrueEnv.rho$Is.OutCol <- Is.OutCol
+  TrueEnv.rho$s <- df$s_high[df$UseSNP]
+  TrueEnv.rho$Is.Outpch <- Is.Outpch
+  
+  TrueEnv.rho2 <- TrueEnv.rho[order(TrueEnv.rho$s, TrueEnv.rho$Is.Out, decreasing=FALSE),]
+  
+  #par(mfrow=c(22,22), mar=c(0.5,0.5,0.5,0.5))
+  
+  names(TrueEnv.rho2)
+  plotenv <- c(2,4, 8, 10:11)
+  print(names(TrueEnv.rho2)[plotenv])
+  ## Plot neutral only
+#   png(paste("results/",nd,"_Paired_NeutOnly_Bonf",round(Bonferroni_P_N ,2),".png", sep=""), width=8, height=8, units = "in", res = 300)
+#    pairs(TrueEnv.rho2[1:9900,c(plotenv,23)], pch=20, col=TrueEnv.rho2$Is.OutCol[1:9900])
+#  dev.off()
+    
+  ## Plot neutral and selected loci with "signed" selected loci
+  #png(paste("results/1R_Paired_Neut&SelSigned_Bonf",round(Bonferroni_P_N ,2),".png", sep=""), width=8, height=8, units = "in", res = 300)
+   # pairs(TrueEnv.rho2[,c(plotenv,23)], pch=20, col=TrueEnv.rho2$Is.OutCol)
+  #dev.off()
+  
+  # Randomly assign selected loci
+  head(TrueEnv.rho2)
+  TrueEnv.rho3 <- TrueEnv.rho2
+  set.seed(1)
+  flip <- sample(c(1,-1),size = length(Is.Out), replace=TRUE)
+  for (i in 1:23){
+    TrueEnv.rho3[,i] <- TrueEnv.rho3[,i] *flip
+  }
+  
+  
+  ## Plot neutral and selected loci with "random" selected loci
+  png(paste("results/",nd,"_Paired_Neut&SelRandom_Bonf",round(Bonferroni_P_N ,2),".png", sep=""), width=8, height=8, units = "in", res = 300)
+    pairs(TrueEnv.rho3[,c(plotenv,23)], pch=TrueEnv.rho3$Is.Outpch, col=TrueEnv.rho3$Is.OutCol)
+    dev.off()
+  
+  ## Plot only selected loci
+#  png(paste("results/1R_Paired_SelRandomOnly_Bonf",round(Bonferroni_P_N ,2),".png", sep=""), width=8, height=8, units = "in", res = 300)
+#  cond <- TrueEnv.rho3$Is.Out==FALSE | TrueEnv.rho3$s>0
+#    pairs(TrueEnv.rho3[cond,c(plotenv,23)], pch=20, col=TrueEnv.rho3$Is.OutCol[cond])
+#    dev.off()
+}# end plot function
+
+Is.Out <- Is.Out1R
+Sel_ind <- Sel_ind1R
+TrueEnv.rho <- TrueEnv.rho1R
+df <- df1R
+nd <- "1R"
+MakePlot()
+
+Is.Out <- Is.Out2R
+Sel_ind <- Sel_ind2R
+TrueEnv.rho <- TrueEnv.rho2R
+df <- df2R
+nd <- "2R"
+MakePlot()
+
+```
+
+
+
+```{r, eval=FALSE, echo=FALSE}
+### Compare covariances and slopes
+covdf <- matrix(NA, ncol=8, nrow=(sum(1:23)-24))
+colnames(covdf) <- c("Env1", "Env2", "Genome_cov", "FP_cov", "TP_cov", "Genome_slope", "FP_slope", "TP_slope")
+covdf <- data.frame(covdf)
+FP_cond <- TrueEnv.rho3$s==0 & TrueEnv.rho3$Is.Out==TRUE
+TP_cond <-  TrueEnv.rho3$s>0 & TrueEnv.rho3$Is.Out==TRUE
+
+k=0
+for (i in 1:21){
+  for (j in (i+1):23){
+    covdf[k,1] <- names(TrueEnv.rho3[i])
+    covdf[k,2] <- names(TrueEnv.rho3[j])
+    k=k+1
+   covdf[k,3] <- as.numeric(cov(TrueEnv.rho3[,i], TrueEnv.rho3[,j]))
+   
+   covdf[k,4] <- as.numeric(cov(TrueEnv.rho3[FP_cond,i], TrueEnv.rho3[FP_cond,j]))
+    covdf[k,5] <-  as.numeric(cov(TrueEnv.rho3[TP_cond,i], TrueEnv.rho3[TP_cond,j]))
+    
+    covdf[k,6] <- as.numeric(lm(TrueEnv.rho3[,i]~ TrueEnv.rho3[,j])$coeff[2])
+    covdf[k,7] <- as.numeric(lm(TrueEnv.rho3[FP_cond,i]~ TrueEnv.rho3[FP_cond,j])$coeff[2])
+    covdf[k,8] <- as.numeric(lm(TrueEnv.rho3[TP_cond,i]~ TrueEnv.rho3[TP_cond,j])$coeff[2])
+    
+  }
+}
+
+
+head(covdf)
+tail(covdf, 50)
+boxplot(log10(abs(covdf[,3:5])))
+boxplot(abs(covdf[,6:8]))
+```
+
+
+
+
+```{r, eval=FALSE, echo=FALSE}
+# trying some network models - doesn't work
+Bonferroni_P_N <- 5
+out1R <- -log10(TrueEnv.P1R[Sel_ind1R,1:23])>Bonferroni_P_N
+colSums(out1R)
+col <- colSums(out1R)>0
+out1Rb <- apply(out1R,2, as.numeric)
+out1Rc <- data.frame(out1Rb[,col])
+tail(out1Rc, 50)
+res <- hc(out1Rc)
+res
+quartz()
+plot(res)
+graphviz.plot(res)
+```

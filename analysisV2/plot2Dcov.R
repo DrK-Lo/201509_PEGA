@@ -15,6 +15,7 @@ plot2Dcov <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
                       x_sub_orange=NULL, y_sub_orange=NULL, plot_orangeCOV=TRUE,
                       x_sub_blue=NULL,  y_sub_blue=NULL, plot_blueCOV=TRUE,
                       x_sub_green=NULL, y_sub_green=NULL, plot_greenCOV=TRUE,
+                      x_sub_yellow=NULL, y_sub_yellow=NULL,plot_yellowCOV=NULL,
                       PE=0, PElab = c("V1", "V2")){
 
   data1 <- cbind(x, y)
@@ -90,11 +91,13 @@ plot2Dcov <- function(x,y, xlab, ylab, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
 
         plot_mycov_sub(x_sub_orange, y_sub_orange, outlinecolor=adjustcolor("brown",0.5), bgcolor=adjustcolor("orange",0.5), mypch=24, mylty=2, linecolor="darkred", PlotCov=plot_orangeCOV)
     
-    plot_mycov_sub(x_sub_green, y_sub_green, outlinecolor=adjustcolor("darkgreen",0.5), bgcolor=adjustcolor("lightgreen",0.5), mypch=21, mylty=3, linecolor="darkgreen", PlotCov=plot_greenCOV)
+       plot_mycov_sub(x_sub_green, y_sub_green, outlinecolor=adjustcolor("darkgreen",0.5), bgcolor=adjustcolor("lightgreen",0.5), mypch=21, mylty=3, linecolor="darkgreen", PlotCov=plot_greenCOV)
+      plot_mycov_sub(x_sub_yellow, y_sub_yellow, outlinecolor=adjustcolor("brown",0.5), bgcolor=adjustcolor("yellow",0.5), mypch=21, mylty=3, linecolor="darkyellow", PlotCov=plot_yellowCOV)
 
     ### Make cov plot for all data
     plot_mycov(data1)
     
-    t <- bquote(~rho ~ "(" ~ .(PElab[1]) ~ "," ~ .(PElab[2]) ~ ") =" ~ .(PE))
-    text(xlim_up*0.5,ylim_lower*0.95, t, cex=1.2)
+    t <- bquote(~rho ~ "(" ~ .(PElab[1]) ~ "," ~ .(PElab[2]) ~ ") =")
+    text(xlim_up*0.5,ylim_lower*0.85, t, cex=1.2)
+    text(xlim_up*0.5,ylim_lower*0.95, round(PE,2), cex=1.2)
 } # end plot_2D.b

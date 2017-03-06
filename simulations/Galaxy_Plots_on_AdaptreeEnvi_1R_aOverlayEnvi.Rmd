@@ -13,12 +13,14 @@ if(!("gstat" %in% installed.packages())){install.packages("gstat")}
 if(!("sp" %in% installed.packages())){install.packages("sp")}   
 if(!("maptools" %in% installed.packages())){install.packages("maptools")} 
 if(!("ncf" %in% installed.packages())){install.packages("ncf")}   
-   
+if(!("fields" %in% installed.packages())){install.packages("fields")}  
+
 library(ggplot2)
 library(gstat)
 library(sp)
 library(maptools)
 library(ncf)
+library(fields)
 ```
 
 ## Evaluating Galaxy plots with known simulation data
@@ -47,13 +49,10 @@ setwd("Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/simulations/"
 ### Load data
 
 ```{r}
-### Simulations
-snps <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.lfmm")
-env_sim <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.env")
-df <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20Bayenv2LFMMpca.Cpval", header=TRUE)
+
 sample_locs <- read.table("data/LW2015samplingdesigns/SchemeRandom1.txt")
-dim(snps)
-dim(env_sim)
+
+dim(sample_locs)
 head(sample_locs)
 ## These were created on a 360 x 360 grid
   range(sample_locs$X_Pops)
@@ -147,7 +146,7 @@ for (j in 3:22){
 ```
 
 
-# compare correlation matrices of raw and interpolated environments 
+# Compare correlation matrices of raw and interpolated environments 
 
 Compare correlation structure between real environments and resampled environment from the 1R model.
 
@@ -161,24 +160,15 @@ names(sample_locs)
 plot(creal, csim)
 abline(0,1)
 
-library(fields)
+
 par(mfrow=c(2,1))
 col <- two.colors(start="red", end="blue", middle="grey")
 image.plot(creal, col=col)
 image.plot(csim, col=col)
 ```
 
-### Compare correlations with simulated environment
-```{r}
-head(env_sim)
-sample_locs$SimEnv <- env_sim[seq(1,1800, by=20),1]
-
-cor(sample_locs$SimEnv, sample_locs[,c(2:3, 8:27)])
-```
-
-The correlations between the adaptree environment and the simulated environment are quite low.
 
 ### Write simulated environments to file
 ```{r}
-
+write.table(sample_locs, "data/results_AdaptreeEnviFor_R90.txt")
 ```

@@ -1,0 +1,44 @@
+---
+title: "Untitled"
+author: "Katie Lotterhos"
+date: "2/21/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysisV2/")
+
+The following files has SNP data and ancestral genomes in the first 4 columns, and then scotts pine in the very last column. Everything in the middle we don't need.
+```
+cd /Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/data/large_files 
+awk -F' ' '{print NF; exit}' head_var_out_GATK3_allhet_pine688_ALL.table
+
+head -n1 head_var_out_GATK3_allhet_pine688_ALL.table | cut -f1-4,638 > ancestralSNPs.txt
+
+cut -f1-4,638 var_out_GATK3_allhet_pine688_ALL.table_filt10_p95_het7_passFILT2.2 >> ancestralSNPs.txt
+```
+
+```{r}
+d <- read.table("../data/large_files/ancestralSNPs.txt", header=TRUE)
+head(d, 30)
+d[,3:5][d[,3:5]=="N"] <- NA
+head(d)
+nrow(d)
+colSums(is.na(d))/ nrow(d)
+```
+
+Evaluate missing data - go with Loblolly.
+
+```{r}
+Ances_flip <- as.character(d$Loblolly_Pine_Neale)
+sum(is.na(Ances_flip)/length(Ances_flip))
+Ances_flip[!(Ances_flip %in% c("A", "C", "G", "T"))] <- "SNP"
+sum(Ances_flip=="SNP")/length(Ances_flip)
+
+Ances_df <- data.frame(d[,1:2], Ances_flip)
+head(Ances_df)
+save(Ances_df, file="../data/Ances_flip.Rdata")
+```
