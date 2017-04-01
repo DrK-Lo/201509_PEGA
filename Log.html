@@ -124,7 +124,57 @@ $(document).ready(function () {
 </div>
 
 
-<p>This log is in Blog-style format (newest at top)</p>
+<p>This log is in Blog-style format (newest at top) ## Mar 3, 2017 I had some new breakthroughs this week. First, I realized that all I had to do was to use clustering to identify my SNP groups and it worked beautifully. There are 4 distinct clusters: Freezing, Aridity, Geography, and Super Multi. Coloring on the galaxy plot looks beautiful.</p>
+<p>I was at the Gordon Research Conference and also had some good ideas about how to move forward.</p>
+<p>There are some new ideas I have and some clear issues I have to deal with though:</p>
+<ul>
+<li><p>How to determine outlier SNPs. I think because the control for population structure is not very extreme with bayenv2, I should rethink whether to use BF &gt; 2 for calling outliers. I think this would could get rid of some more false positives. I can’t test this with the simulations though unless I redo the analysis with Bayenv2 and the adaptree environments.</p></li>
+<li><p>Representing SNPs in multivariate space with redundancy analysis instead of on galaxy plots (my idea). I think this could be accomplished by setting up the data in this manner:</p></li>
+</ul>
+<p>SNP, rhoE1, rhoE2, rhoE3, E1, E2, E3</p>
+<p>This should allow me to study the SNP associations as the response variables and the environments as the explanatory variables. I don’t know if this is statistically legal (because the associations are with every environment), but I could check it using the simulations.</p>
+<p>On the RDA plot I would want to visualize the E’s with arrows and the SNPs as points.</p>
+<p>The alternate setup I think would be something like:</p>
+<p>SNP1, SNP2, SNP3, E1, E2, E3</p>
+<p>NOTE: The idea behind redundancy analysis is to apply linear regression in order to represent Y as linear function of X and then to use PCA in order to visualize the result. Among those components of Y which can be linearly explained with X (multivariate linear regression) take those components which represent most of the variance. I DO NOT THINK WE CAN LEGALLY DO THIS WITH OUR VARIABLES BECAUSE THEY ARE NOT INDEPENDENT - VIOLATING ASSUMPTION.</p>
+<ul>
+<li>Determining the most important environmental variables with graphical models (Paul Magwene suggestion).</li>
+</ul>
+<p>For this analysis I would also have to test on simulations. But I would calculate the conditional probability of being an outlier based on the probability of being an outlier in every other environmental variable. So for a set of SNPs in each group, transform the effect sizes into T/F based on whether they are outliers. Then calculate the a graphical model and see if the causal environment (in the sims) is at the top of the graphical model.</p>
+<p>TRY FIRST!</p>
+<ul>
+<li><p>PCs. We do have the results from the PC associations, I could look at those and see if there is grouping of SNPs on the orthgonal PC environments. This would involve digging back in time. Sigh. Then in principle I could use this to do an RDA, but man would that be annoying to interpret.</p></li>
+<li><p>Multiple regression with a hierarchical model while controlling for covariance among hierarchical variables. I was having a conversation the last morning at breakfast with Bertrand Servin and we came up with this idea, which he thinks can be implemented in hapFLKadapt.</p></li>
+</ul>
+<div id="feb-21-2017" class="section level2">
+<h2>Feb 21, 2017</h2>
+<p>I have accomplished a lot in the last month, but there is one more step that we need to do to make this better. The next step is to recode the alleles so that the ancestral allele is coded one way and the derived allele is coded a different way. This is better than alphabetical, because it would allow us to visualize if groups of alleles are evolving in a particular direction relative to the ancestral state.</p>
+<ol style="list-style-type: decimal">
+<li><p>What species is Birch Island? What is Parent 1776 and 336? After this I assume is the SNP data for every individual, and in the very last column is Scotts Pine.</p></li>
+<li><p>If at least 2 of the 3 outgroups (Birch, Loblolly, and Scots) have the same allele, call this the “ancestral” allele. If there is an N in two of the three outgroups, use the outgroup without missing data to define the “ancestral” allele. If there is disagreement or there is a SNP in two of the 3 outgroups, assign “SNP” for ancestral allele.</p></li>
+<li><p>The alleles I have now (focal allele) are alphabetically coded. If {focal allele == ancestral allele} (flip = 1). If {focal allele != ancestral allele}(flip = -1)</p></li>
+</ol>
+<p>Download data:</p>
+<p>Katies-MacBook-Air:Desktop katie$ scp <a href="mailto:klott@hulk.zoology.ubc.ca">klott@hulk.zoology.ubc.ca</a>:/data/seqcap/pine/bwa_pseudo/round2_bams/var_out_GATK3_allhet_pine688_ALL.table_filt10_p95_het7_passFILT2.2 . var_out_GATK3_allhet_pine688_ALL.table_filt10_p95_het7_passFI 100% 1555MB 1.4MB/s 18:32</p>
+<p>Katies-MacBook-Air:Desktop katie$ scp <a href="mailto:klott@hulk.zoology.ubc.ca">klott@hulk.zoology.ubc.ca</a>:/data/seqcap/pine/bwa_pseudo/round2_bams/head_var_out_GATK3_allhet_pine688_ALL.table . head_var_out_GATK3_allhet_pine688_ALL.table 100% 5559 5.4KB/s 00:00</p>
+<p>For example: In our data, alleles are coded alphabetically, so that A would be coded as 0 and T coded as 1.</p>
+<p>In lodgepole we observe a SNP at this site, with T occurring in higher frequency in COLD populations and A occurring in higher frequency in WARM populations. Current allele coding would give a negative correlation between allele frequency and temperature.</p>
+<ul>
+<li><p>Ancestral allele is an A. Correct Interpretation If The Derived Allele is Adapting: the derived allele (T) is adapting to cold. If we code A as 0 and T as 1 (flip = 1), then we would observe a <em>negative</em> correlation between allele frequency and temperature (if this happens for many alleles, we would see a cluster of points with <em>negative</em> relationships with temperature. This would be in the same direction as the ancestral state - desireable).</p></li>
+<li><p>Ancestral allele is an T. Correct Interpretation If The Derived Allele is Adapting: the derived allele (A) is adapting to warm. If we code A as 1 and T as 0 (flip = -1), then we would observe a <em>positive</em> correlation between allele frequency and temperature (if this happens for many alleles, we would see a cluster of points with <em>positive</em> relationships with temperature. This would be in the same direction as the ancestral state - desireable)</p></li>
+<li><p>Ancestral allele is an A. If we code A as 1 and T as 0 (flip = -1), then we would observe a positive correlation between allele frequency and temperature (if this happens for many alleles, we would see a cluster of points with positive relationships with temperature. This would be in the opposite direction as the ancestral state, undesirable)</p></li>
+</ul>
+<p>In lodgepole we observe a SNP at this site, with T occurring in higher frequency in WARM populations and A occurring in higher frequency in COLD populations. Current allele coding (A=0, T=1) would give a POSITIVE correlation between allele frequency and temperature.</p>
+<ul>
+<li><p>Ancestral allele is an A. Correct Interpretation If The Derived Allele is Adapting: the derived allele (T) is adapting to warm. If we code A as 0 and T as 1 (flip = 1), then we would observe a <em>positive</em> correlation between allele frequency and temperature (if this happens for many alleles, we would see a cluster of points with <em>positive</em> relationships with temperature. This would be in the same direction as the ancestral state, desireable)</p></li>
+<li><p>Ancestral allele is an T. Correct Interpretation If The Derived Allele is Adapting: the derived allele (A) is adapting to cold. If we code A as 1 and T as 0 (flip = -1), then we would observe a <em>negative</em> correlation between allele frequency and temperature (if this happens for many alleles, we would see a cluster of points with <em>negative</em> relationships with temperature. This would be in the opposite direction as the ancestral state, desireable)</p></li>
+</ul>
+<div id="the-conclusion" class="section level3">
+<h3>The conclusion:</h3>
+<p>If we observe a bunch of points with a positive correlation, the derived allele is adapting to positive values of the environment.</p>
+<p>If we observe a bunch of points with a negative correlation, the derived allele is adapting to negative values of the environment.</p>
+</div>
+</div>
 <div id="jan-14-2017" class="section level2">
 <h2>Jan 14, 2017</h2>
 <p>I have completely revised the methods and about half the results. The major change has been in the criteria that I was using to obtain outlier SNPs - using the new criteria is more in line with what Sam did in the Science paper and should also give more similar results to what Jeremy is getting with the array data. This changes a lot of the details of the results but not the big picture. Other major changes include doing all the stats to justify the groupings and adding background about the galaxy plot concept.</p>

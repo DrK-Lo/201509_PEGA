@@ -431,12 +431,13 @@ boxplot(abs(covdf[,6:8]))
 
 ```{r, eval=FALSE, echo=FALSE}
 # trying some network models - doesn't work
-Bonferroni_P_N <- 5
+Bonferroni_P_N <- 7
 out1R <- -log10(TrueEnv.P1R[Sel_ind1R,1:23])>Bonferroni_P_N
 colSums(out1R)
 col <- colSums(out1R)>0
 out1Rb <- apply(out1R,2, as.numeric)
 out1Rc <- data.frame(out1Rb[,col])
+dim(out1Rc)
 tail(out1Rc, 50)
 res <- hc(out1Rc)
 res
