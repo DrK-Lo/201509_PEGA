@@ -298,8 +298,19 @@ This analysis consists of several steps:
 
 
 # First, take absolute value of the SNP effect sizes b/c of signed nature of alleles
+results_pine3$gtcontig_pos <-  paste(results_pine3$gtcontig, results_pine3$pos_gcontig, sep="_")
+labs <- results_pine3$gtcontig_pos
+labs2 <- gsub("_c0_seq1",replacement = "",labs)
+labs3 <- gsub("_c1_seq1",replacement = "",labs2)
+labs4 <- gsub("_c4_seq1",replacement = "",labs3)
+results_pine3$gtcontig_pos <- labs4
 
-snp_order <- hclust(dist(abs(results_pine3[results_pine3$Group1_logical, env_cols])))
+snp_mat <- abs(results_pine3[results_pine3$Group1_logical, env_cols])
+rownames(snp_mat) <- results_pine3$gtcontig_pos[results_pine3$Group1_logical]
+head(snp_mat)
+snp_dist <- dist(snp_mat, diag=TRUE, upper=TRUE)
+str(snp_dist)
+snp_order <- hclust(snp_dist)
 head(snp_order$labels[snp_order$order])
 
 clusMember = cutree(snp_order, 4)
@@ -521,8 +532,8 @@ dev.off()
 
 ```{r}
 ### snp_order is the object containing the dendogram describing the relationship among SNPs
-#labs = results_pine3$gtcontig[results_pine3$Group1_logical]
-results_pine3$gtcontig_pos <-  paste(results_pine3$gtcontig, results_pine3$pos_gcontig, sep="_")
+# snp_dist is the distance object
+snp_distmat <- (as.matrix(snp_dist))
 
 results_pine3$clustercol <- results_pine3$cluster
 results_pine3$clustercol[results_pine3$cluster==1] = "orange" #Aridity
@@ -531,25 +542,11 @@ results_pine3$clustercol[results_pine3$cluster==3] = "blue" #Freezing
 results_pine3$clustercol[results_pine3$cluster==4] = "green" #Multi
 head(results_pine3$clustercol[results_pine3$Group1_logical])
 
-labs <- results_pine3$gtcontig_pos[results_pine3$Group1_logical]
-labs2 <- gsub("_c0_seq1",replacement = "",labs)
-labs3 <- gsub("_c1_seq1",replacement = "",labs2)
-labs4 <- gsub("_c4_seq1",replacement = "",labs3)
-levels(factor(labs4))
+```
 
-#table(labs)
-snp_order$labels <- labs4
-str(snp_order)
 
-### Get distances among SNPs 
-codist <- cophenetic(snp_order)
-hist(codist)
-str(codist)
-
-### Try plotting relationships with codist > 1 or >1.25
-
-### Need a function to reorder data to pairwise distances
-  
+#### Need a function to reorder data to pairwise distances
+```{r}
   myFun <- function(inDist) {
     if (class(inDist) != "dist") stop("wrong input type")
     A <- attr(inDist, "Size")
@@ -561,35 +558,93 @@ str(codist)
       col = rep(B[-length(B)], (length(B)-1):1),
       value = as.vector(inDist))
   }
-
-d4 <- myFun(codist)
-head(d4)
-
-### Create undirected network graph
-  graph_cors2 <- d4 %>%
-    filter(abs(value) < 1.0) %>%
-    graph_from_data_frame(directed = FALSE)
+```
   
+#### Multi group
+```{r}
+shortclust <- results_pine3$cluster[results_pine3$Group1_logical]
+snp_distmat_multi <- snp_distmat[shortclust ==4, shortclust ==4]
+dim(snp_distmat_multi)
+head(snp_distmat_multi[1:5, 1:5])
+hist(snp_distmat_multi)
+  # This histogram is bimodal with the larger values > 0.4
+
+d4_multi <- myFun(as.dist(snp_distmat_multi))
+head(d4_multi)
+d4_multi$value <- log10(d4_multi$value)
+hist(d4_multi$value)
+
+### Create undirected network graph for multi group
+  graph_cors_multi <- d4_multi %>%
+    #filter(value < 0.3) %>% 
+    filter(value < -0.4) %>% 
+    graph_from_data_frame(directed = FALSE)
   # check node names
-  V(graph_cors2)$name
+  V(graph_cors_multi)$name
   # line up names
-  myo <- match(V(graph_cors2)$name, snp_order$labels)
-  myocol <- results_pine3$clustercol[results_pine3$Group1_logical][myo]
-  z <- cbind(myocol, V(graph_cors2)$name, snp_order$labels[myo])
-  table(z[,1]) #check against colors, think about right
+  (myo <- match(V(graph_cors_multi)$name, results_pine3$gtcontig_pos))
+  (myocol <- results_pine3$clustercol[myo])
+  V(graph_cors_multi)$name <- gsub("_", "\n",V(graph_cors_multi)$name )
+  z <- cbind(myocol, V(graph_cors_multi)$name, results_pine3$gtcontig_pos[myo])
+  table(z[,1]) #check against colors
   
 ### 
-  pdf(file = "results/Network.pdf", width=20, height=20)
-  ggraph(graph_cors2) +
-  geom_edge_link(aes(edge_alpha = 0.5, 
-                     edge_width = 0.5, color = "blue")) +
+  pdf(file = "../results/Network_Multi.pdf", width=20, height=20)
+  ggraph(graph_cors_multi) +
+  geom_edge_link(aes(edge_alpha = 0.2, 
+                     edge_width = 5e-05, color=value)) +
   guides(edge_alpha = "none", edge_width = "none") +
-  #scale_edge_colour_gradientn(limits = c(-1, 1), 
-  #                            colors = c("firebrick2", "dodgerblue2")) +
-  geom_node_point(color = "red", size = 10) +
-  geom_node_text(aes(label = name)) +
-  theme_graph() +
-  labs(title = "Hierarchical distances")
+  scale_edge_colour_gradientn(limits = c(min(d4_multi$value, na.rm=TRUE),max(d4_multi$value, na.rm=TRUE)), 
+                              colors = c("firebrick2", "dodgerblue2")) +
+  geom_node_point(color = myocol, size = 30) +
+  geom_node_text(aes(label = name)) + 
+  theme_graph() 
+  #labs(title = "Hierarchical distances")
   dev.off()
+```
 
+
+#### Aridity group
+```{r}
+shortclust <- results_pine3$cluster[results_pine3$Group1_logical]
+snp_distmat_multi <- snp_distmat[shortclust ==1, shortclust ==1]
+dim(snp_distmat_multi)
+head(snp_distmat_multi[1:5, 1:5])
+hist(snp_distmat_multi)
+  # This histogram is bimodal with the larger values > 0.4
+
+
+d4_multi <- myFun(as.dist(snp_distmat_multi))
+head(d4_multi)
+d4_multi$value <- log10(d4_multi$value)
+hist(d4_multi$value)
+
+### Create undirected network graph for multi group
+  graph_cors_multi <- d4_multi %>%
+    #filter(value < 0.3) %>% 
+    filter(value < -0.4) %>% 
+    graph_from_data_frame(directed = FALSE)
+  write.graph(graph_cors_multi, file = "../results_AridityNetwork.gml", format="gml")
+  # check node names
+  V(graph_cors_multi)$name
+  # line up names
+  (myo <- match(V(graph_cors_multi)$name, results_pine3$gtcontig_pos))
+  (myocol <- results_pine3$clustercol[myo])
+  V(graph_cors_multi)$name <- gsub("_", "\n",V(graph_cors_multi)$name )
+  z <- cbind(myocol, V(graph_cors_multi)$name, results_pine3$gtcontig_pos[myo])
+  table(z[,1]) #check against colors
+  
+### 
+  pdf(file = "../results/Network_Aridity.pdf", width=20, height=20)
+  ggraph(graph_cors_multi) +
+  geom_edge_link(aes(edge_alpha = 0.2, 
+                     edge_width = 5e-05, color=value)) +
+  guides(edge_alpha = "none", edge_width = "none") +
+  scale_edge_colour_gradientn(limits = c(min(d4_multi$value, na.rm=TRUE),max(d4_multi$value, na.rm=TRUE)), 
+                              colors = c("firebrick2", "dodgerblue2")) +
+  geom_node_point(color = myocol, size = 30) +
+  geom_node_text(aes(label = name)) + 
+  theme_graph() 
+  #labs(title = "Hierarchical distances")
+  dev.off()
 ```
