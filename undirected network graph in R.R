@@ -90,10 +90,10 @@ ggraph(graph_cors2) +
 
 x1 <- rnorm(100)
 y1 <- x1 + rnorm(100)
-z1 <- x1 + rnorm(100)
+z1 <- x1 + rnorm(100, 0, 3)
 x2 <- rnorm(100)
 y2 <- x2 + rnorm(100)
-z2 <- x2 + rnorm(100)
+z2 <- x2 + rnorm(100, 0, 3)
 yo <- data.frame(x1, y1, z1, x2, y2, z2)
 plot(yo)
 mydata <- t(scale(yo))
@@ -148,7 +148,7 @@ ggraph(graph_cors2) +
   geom_node_point(color = "red", size = 10) +
   geom_node_text(aes(label = name)) +
   theme_graph() +
-  labs(title = "Hierarchical distances between car variables")
+  labs(title = "Hierarchical distances")
 
 
 ggraph(graph_cors3) +

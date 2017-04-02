@@ -15,15 +15,6 @@ setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/analysisV2/"
 load("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical.RData")
 ```
 
-This loads:
-
-* PE
-* results_pine3 (data frame with SNPs in rows and results in columns)
-* gtcontig_array 
-* gtcontig_array_names
-* PE_matchGWAS
-* PE_matchGEA
-
 ```{r}
 #if(!("ash" %in% installed.packages())){install.packages("ash")}
 #install.packages("VennDiagram")
@@ -89,20 +80,14 @@ sum(!is.na(flipnum))/nrow(results_pine3)
 
 results_pine3$Ances_flipNum <- flipnum
 ```
+This loads:
 
-
-```{r, label="load data"}
-save.image("../data/large_files/Pine_Alpha_AveRho_WithSuperLogical_andAncestralFlip.RData")
-```
-
-
-
-
-
-
-
-
-
+* PE
+* results_pine3 (data frame with SNPs in rows and results in columns)
+* gtcontig_array 
+* gtcontig_array_names
+* PE_matchGWAS
+* PE_matchGEA
 
 
 ### Group 1: Top SNP's from Sam's top candidates
@@ -1013,9 +998,7 @@ dev.off()
 
 ## Galaxy in multivariate environment raw WITH 3x3
 ```{r}
-load("../data/PineHeatmap.Rdata")
-# loads env_clust
-head(env_clust$carpet)
+
 
 rawp_names
 whichvars1 <- c("LAT", "LONG", "ELEVATION") #Eref #i columsn
