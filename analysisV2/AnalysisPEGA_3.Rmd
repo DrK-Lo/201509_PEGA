@@ -36,7 +36,10 @@ library(RColorBrewer)
 
 #source("http://www.bioconductor.org/biocLite.R")
 #biocLite("limma")
-
+  library(corrr)
+  library(igraph)
+  library(ggplot2)
+  library(ggraph)
 library(dendextend)
 library(superheat)
 require(VennDiagram)
@@ -314,7 +317,7 @@ snp_order <- hclust(snp_dist)
 head(snp_order$labels[snp_order$order])
 
 clusMember = cutree(snp_order, 4)
-table(results_pine3$type[results_pine3$Group1_logical], clusMember)
+table(clusMember)
 length(clusMember)
 results_pine3$cluster[results_pine3$Group1_logical] <- clusMember
 
@@ -536,13 +539,126 @@ dev.off()
 snp_distmat <- (as.matrix(snp_dist))
 
 results_pine3$clustercol <- results_pine3$cluster
-results_pine3$clustercol[results_pine3$cluster==1] = "orange" #Aridity
-results_pine3$clustercol[results_pine3$cluster==2] = "yellow" #Geography 
-results_pine3$clustercol[results_pine3$cluster==3] = "blue" #Freezing
-results_pine3$clustercol[results_pine3$cluster==4] = "green" #Multi
-head(results_pine3$clustercol[results_pine3$Group1_logical])
+
+contigdat <- data.frame(gtcontig = levels(factor(results_pine3$gtcontig[results_pine3$Group1_logical])),
+          contigID = 1:108)
+contigdat$col <- NA
+
+# Aridity
+  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==1])
+  ncol
+  arid.fills <- adjustcolor(two.colors(n=length(ncol), start="brown2", middle= "orange", end="darkorange4"),alpha=0.9)
+  plot(1:length(arid.cols), col=arid.fills, pch=19, cex=2)
+  contigdat$col[match(names(ncol), contigdat$gtcontig)] = arid.fills
+
+# Multi
+  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==4])
+  ncol
+  contigdat$col[match(names(ncol), contigdat$gtcontig)] <- adjustcolor(c("#DAF7A6", "chartreuse4", "#28B463"), alpha=0.9)
+
+# Geog
+  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==2])
+  ncol
+  length(ncol)
+   fills <- adjustcolor(two.colors(n=length(ncol), start="gold", middle= "peachpuff", end="lightgoldenrod3"),alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contigdat$col[match(names(ncol), contigdat$gtcontig)] = fills
+
+# Freezing
+  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==3])
+  ncol
+  length(ncol)
+   fills <- adjustcolor(two.colors(n=length(ncol), start="darkturquoise", middle= "darkslategrey", end="dodgerblue"),alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contigdat$col[match(names(ncol), contigdat$gtcontig)] = fills
+  
+contigdat
 
 ```
+
+
+  
+#### Function to draw network based on correlations
+```{r}
+
+MakeCorNetwork <- function(clustnum, filename, corthreshold, colordf){
+  
+  ### Based on correlation in associations (co-association)
+  names(results_pine3)[env_cols]
+  multidat <- abs(results_pine3[which(results_pine3$cluster==clustnum), env_cols])
+  #str(multidat)
+  rownames(multidat) <- results_pine3$gtcontig_pos[which(results_pine3$cluster==clustnum)]
+  dim(multidat)
+  
+  tidy_cors <- t(multidat) %>% 
+    correlate() %>% 
+    stretch()
+  #head(tidy_cors)
+  
+  nedges <- nrow(tidy_cors %>%
+    filter(abs(r) > corthreshold))
+  
+  print(c("Number of edges:", nedges))
+  
+  graph_cors <- tidy_cors %>%
+    filter(abs(r) > corthreshold) %>%
+    graph_from_data_frame(directed = FALSE )
+  
+    #write_graph(tidy_cors %>%  filter(abs(r) > 0.75) %>% graph_from_data_frame(directed = FALSE ), file = paste("../results/NetworkCorr0",filename,".GML",sep=""), format="gml")
+    
+    #write.table(tidy_cors %>%  filter(abs(r) > 0.75) , file = paste("../results/NetworkCorr0",filename,".txt",sep=""), row.names=FALSE)
+  
+    # check node names
+    V(graph_cors)$name
+    toadd <- !(rownames(multidat) %in% V(graph_cors)$name)
+    graph_cors2 <- add_vertices(graph_cors, nv = sum(toadd, na.rm=TRUE), name= rownames(multidat)[toadd])
+    V(graph_cors2)$name
+    sum(!(rownames(multidat) %in% V(graph_cors2)$name))
+    graph_cors <- graph_cors2
+    
+    # line up names
+    (myo <- match(V(graph_cors)$name, results_pine3$gtcontig_pos))
+    
+    contigname = results_pine3$gtcontig[myo]
+    
+    myocol <- colordf$col[match(contigname, colordf$gtcontig)]
+    myoname <- colordf$contigID[match(contigname, colordf$gtcontig)]
+    
+    #(myocol <- results_pine3$clustercol[myo])
+    #V(graph_cors)$name <- gsub("_", "\n",V(graph_cors)$name )
+    #z <- cbind(myocol, V(graph_cors)$name, results_pine3$gtcontig_pos[myo])
+    
+   #print(table(z[,1])) #check against colors
+  
+   png(file = paste("../results/NetworkCorr2Hist", filename,".pdf", sep=""), width=15, height=15, units="in", res=300)
+   hist(tidy_cors$r)
+   dev.off()
+    #head(E(graph_cors)$r)
+#pdf(file = paste("../results/NetworkCorr", filename,".pdf", sep=""), width=15, height=15) #units="in", res=300)
+    ggraph(graph_cors, layout="kk") +
+    geom_edge_fan2(aes(edge_alpha = 0.01)) +
+    guides(edge_alpha = "none", edge_width = "none") +
+    #scale_edge_colour_gradientn(limits = c(-1, 1), 
+    #                            colors = c("firebrick2", "dodgerblue2")) +
+    geom_node_point(color = myocol, size = 10) +
+    geom_node_text(aes(label = myoname, size=0.1)) +
+    theme_graph() +
+    labs(title = filename)
+   
+   ggsave(paste("../results/Network", filename,corthreshold, "corr.pdf", sep="_"), width=15, height=15, units="in")
+   
+    #dev.off()
+} # end function
+```
+
+```{r}
+colSums(table(results_pine3$gtcontig[results_pine3$Group1_logical], results_pine3$cluster[results_pine3$Group1_logical]))
+#MakeCorNetwork(1, "Aridity", 0.99, colordf=contigdat) # 273
+#MakeCorNetwork(2, "Geography", 0.99, colordf=contigdat) # 191
+#MakeCorNetwork(3, "Freezing", 0.99, colordf=contigdat) # 153
+#MakeCorNetwork(4, "Multi", 0.99, colordf=contigdat) # 55
+```
+
 
 
 #### Need a function to reorder data to pairwise distances
@@ -559,92 +675,92 @@ head(results_pine3$clustercol[results_pine3$Group1_logical])
       value = as.vector(inDist))
   }
 ```
-  
-#### Multi group
+
+#### Function to draw network based on distance matrix
 ```{r}
 shortclust <- results_pine3$cluster[results_pine3$Group1_logical]
-snp_distmat_multi <- snp_distmat[shortclust ==4, shortclust ==4]
-dim(snp_distmat_multi)
-head(snp_distmat_multi[1:5, 1:5])
-hist(snp_distmat_multi)
+
+MakeDistNetwork <- function(clustnum, filename, disthreshold, colordf){
+  
+  ### Based on correlation in associations (co-association)
+  #names(results_pine3)[env_cols]
+  #multidat <- abs(results_pine3[which(results_pine3$cluster==clustnum), env_cols])
+  #str(multidat)
+  #rownames(multidat) <- results_pine3$gtcontig_pos[which(results_pine3$cluster==clustnum)]
+  #dim(multidat)
+  
+  snp_distmat_multi <- snp_distmat[shortclust ==clustnum, shortclust ==clustnum]
+  print(dim(snp_distmat_multi))
+  head(snp_distmat_multi[1:5, 1:5])
+  
+  #hist(snp_distmat_multi)
   # This histogram is bimodal with the larger values > 0.4
 
-d4_multi <- myFun(as.dist(snp_distmat_multi))
-head(d4_multi)
-d4_multi$value <- log10(d4_multi$value)
-hist(d4_multi$value)
-
-### Create undirected network graph for multi group
-  graph_cors_multi <- d4_multi %>%
-    #filter(value < 0.3) %>% 
-    filter(value < -0.4) %>% 
-    graph_from_data_frame(directed = FALSE)
-  # check node names
-  V(graph_cors_multi)$name
-  # line up names
-  (myo <- match(V(graph_cors_multi)$name, results_pine3$gtcontig_pos))
-  (myocol <- results_pine3$clustercol[myo])
-  V(graph_cors_multi)$name <- gsub("_", "\n",V(graph_cors_multi)$name )
-  z <- cbind(myocol, V(graph_cors_multi)$name, results_pine3$gtcontig_pos[myo])
-  table(z[,1]) #check against colors
+  d4_multi <- myFun(as.dist(snp_distmat_multi))
+  head(d4_multi)
+  #hist(d4_multi$value)
   
-### 
-  pdf(file = "../results/Network_Multi.pdf", width=20, height=20)
-  ggraph(graph_cors_multi) +
-  geom_edge_link(aes(edge_alpha = 0.2, 
-                     edge_width = 5e-05, color=value)) +
-  guides(edge_alpha = "none", edge_width = "none") +
-  scale_edge_colour_gradientn(limits = c(min(d4_multi$value, na.rm=TRUE),max(d4_multi$value, na.rm=TRUE)), 
-                              colors = c("firebrick2", "dodgerblue2")) +
-  geom_node_point(color = myocol, size = 30) +
-  geom_node_text(aes(label = name)) + 
-  theme_graph() 
-  #labs(title = "Hierarchical distances")
-  dev.off()
+  (nedges <- nrow(d4_multi %>%
+    filter(abs(value) < disthreshold)))
+  
+  print(c("Number of edges:", nedges))
+  if(nedges > 30000){print("Too many edges"); break}
+  
+  
+  graph_cors <- d4_multi %>%
+    filter(value < disthreshold) %>% #filter to close distances
+    graph_from_data_frame(directed = FALSE)
+  
+    # check node names
+    V(graph_cors)$name
+    toadd <- !(rownames(snp_distmat_multi) %in% V(graph_cors)$name)
+    sum(toadd)
+    graph_cors2 <- add_vertices(graph_cors, nv = sum(toadd, na.rm=TRUE), name= rownames(snp_distmat_multi)[toadd])
+    V(graph_cors2)$name
+    sum(!(rownames(snp_distmat_multi) %in% V(graph_cors2)$name))
+    graph_cors <- graph_cors2
+    
+    # line up names
+    (myo <- match(V(graph_cors)$name, results_pine3$gtcontig_pos))
+    
+    contigname = results_pine3$gtcontig[myo]
+    
+    myocol <- colordf$col[match(contigname, colordf$gtcontig)]
+    myoname <- colordf$contigID[match(contigname, colordf$gtcontig)]
+    
+    #(myocol <- results_pine3$clustercol[myo])
+    #V(graph_cors)$name <- gsub("_", "\n",V(graph_cors)$name )
+    #z <- cbind(myocol, V(graph_cors)$name, results_pine3$gtcontig_pos[myo])
+    
+   #print(table(z[,1])) #check against colors
+  
+   png(file = paste("../results/NetworkDist2Hist", filename,".pdf", sep=""), width=15, height=15, units="in", res=300)
+   hist(d4_multi$value)
+   lines(x=c(disthreshold, disthreshold), y=c(0,1000), col="blue", lwd=5)
+   dev.off()
+
+    ggraph(graph_cors, layout="kk") +
+    geom_edge_fan2(aes(edge_alpha = 0.01)) +
+    guides(edge_alpha = "none", edge_width = "none") +
+    #scale_edge_colour_gradientn(limits = c(-1, 1), 
+    #                            colors = c("firebrick2", "dodgerblue2")) +
+    geom_node_point(color = myocol, size = 10) +
+    geom_node_text(aes(label = myoname, size=0.1)) +
+    theme_graph() +
+    labs(title = filename)
+   
+   ggsave(paste("../results/Network", filename,disthreshold, "dist.pdf", sep="_"), width=15, height=15, units="in")
+   
+    #dev.off()
+} # end function
+```
+
+```{r}
+colSums(table(results_pine3$gtcontig[results_pine3$Group1_logical], results_pine3$cluster[results_pine3$Group1_logical]))
+MakeDistNetwork(1, "Aridity", 0.1, colordf=contigdat) 
+MakeDistNetwork(2, "Geography", 0.1, colordf=contigdat) 
+MakeDistNetwork(3, "Freezing", 0.1, colordf=contigdat) 
+MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat) 
 ```
 
 
-#### Aridity group
-```{r}
-shortclust <- results_pine3$cluster[results_pine3$Group1_logical]
-snp_distmat_multi <- snp_distmat[shortclust ==1, shortclust ==1]
-dim(snp_distmat_multi)
-head(snp_distmat_multi[1:5, 1:5])
-hist(snp_distmat_multi)
-  # This histogram is bimodal with the larger values > 0.4
-
-
-d4_multi <- myFun(as.dist(snp_distmat_multi))
-head(d4_multi)
-d4_multi$value <- log10(d4_multi$value)
-hist(d4_multi$value)
-
-### Create undirected network graph for multi group
-  graph_cors_multi <- d4_multi %>%
-    #filter(value < 0.3) %>% 
-    filter(value < -0.4) %>% 
-    graph_from_data_frame(directed = FALSE)
-  write.graph(graph_cors_multi, file = "../results_AridityNetwork.gml", format="gml")
-  # check node names
-  V(graph_cors_multi)$name
-  # line up names
-  (myo <- match(V(graph_cors_multi)$name, results_pine3$gtcontig_pos))
-  (myocol <- results_pine3$clustercol[myo])
-  V(graph_cors_multi)$name <- gsub("_", "\n",V(graph_cors_multi)$name )
-  z <- cbind(myocol, V(graph_cors_multi)$name, results_pine3$gtcontig_pos[myo])
-  table(z[,1]) #check against colors
-  
-### 
-  pdf(file = "../results/Network_Aridity.pdf", width=20, height=20)
-  ggraph(graph_cors_multi) +
-  geom_edge_link(aes(edge_alpha = 0.2, 
-                     edge_width = 5e-05, color=value)) +
-  guides(edge_alpha = "none", edge_width = "none") +
-  scale_edge_colour_gradientn(limits = c(min(d4_multi$value, na.rm=TRUE),max(d4_multi$value, na.rm=TRUE)), 
-                              colors = c("firebrick2", "dodgerblue2")) +
-  geom_node_point(color = myocol, size = 30) +
-  geom_node_text(aes(label = name)) + 
-  theme_graph() 
-  #labs(title = "Hierarchical distances")
-  dev.off()
-```
