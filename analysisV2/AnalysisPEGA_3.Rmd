@@ -49,6 +49,7 @@ require(limma)
   require(dplyr)
   require(cluster)
 source("plot2Dcov.R")
+source("galaxy2.R")
 ```
 
 Get incides for different groups of columns in the dataframe
@@ -275,7 +276,7 @@ This analysis consists of several steps:
     cormat <- cormat[,22:1]
     head(cormat)
     longnames <- data.frame(rownames(cormat),colnames(cormat))
-    rownames(cormat) <- colnames(cormat)
+    #rownames(cormat) <- colnames(cormat)
     head(cormat)
     env_clust <- hclust(abs(dist(as.matrix(cormat))))
     env_clust$order
@@ -291,11 +292,11 @@ This analysis consists of several steps:
     cormat2 <- cormat2[, env_clust$order]
     head(cormat2)
     par(mar=c(4,1,1,1))
-    png("../results/dendogram_environment.png", width=6.5, height=9, units = "in", res=500)
+    png("../results/dendogram_environment.png", width=12, height=9, units = "in", res=500)
     superheat(cormat2, col.dendrogram = TRUE,#row.dendrogram=TRUE,
               order.rows = 1:22,
               order.cols = 1:22,#legend.height = 0.05,
-              left.label.size = 0.3, bottom.label.size =  0.25,
+              left.label.size = 1, bottom.label.size =  0.25,
               bottom.label.text.angle = 90)
     dev.off()
 
@@ -377,13 +378,10 @@ par(mfrow=c(1,1), mar=c(4,4,1,1))
 x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
 y <- results_pine3$MAP_raw_rho*results_pine3$Ances_flipNum
 
-plot2Dcov(x=x, y=y, 
+galaxyplot(x=x, y=y, 
        xlab= "Spearman's rho between allele frequency and MAT", 
        ylab= "Spearman's rho between allele frequency and MAP" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       plot_greenCOV = FALSE, plot_orangeCOV = FALSE, 
-       plot_blueCOV = FALSE, plot_yellowCOV = FALSE,
-       PE=0.33, PElab=c("MAT", "MAP"))
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=0.33, PElab=c("MAT", "MAP"))
 
 plot2Dcov(x=x, y=y, 
        xlab= "Spearman's rho betweenallele frequency and MAT", 
@@ -491,48 +489,7 @@ dev.off()
 ```
 
 
-
-## Create Venn Tables
-```{r}
-limit.df <- results_pine3[results_pine3$Group1_logical,]
-dim(limit.df)
-
-### Overlap among SNPs
-a<- vennCounts(cbind(limit.df$cluster==1, # aridity
-                     limit.df$cluster==2, # geography
-                     limit.df$cluster==3, # freezing
-                     limit.df$cluster==4)) # multi
-# vennDiagram(a) note that this is meaningless b/c at SNP level
-
-### Overlap among contigs
-contig.group.df <- data.frame(
-  Aridity = table(limit.df$gtcontig,limit.df$cluster==1)[,2],
-  Geography = table(limit.df$gtcontig,limit.df$cluster==2)[,2],
-  Freezing = table(limit.df$gtcontig,limit.df$cluster==3)[,2],
-  Multi = table(limit.df$gtcontig,limit.df$cluster==4)[,2]
-)
-
-contig.group.df$index=1:nrow(contig.group.df)
-
-contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$Freezing,  contig.group.df$Aridity, contig.group.df$Geography, decreasing=TRUE),]
-
-head(contig.group.df)
-nrow(contig.group.df)
-
-# Num SNPs
-pdf("../results/PineVenn_cluster.pdf", width=6, height=10)
-  par(mar=c(4,6, 0,1))
-  barplot(t(as.matrix(contig.group.df[,c(4,3,1,2)])), beside = FALSE, horiz = TRUE, las=1, col=c("lightgreen", "lightblue",  "orange", "yellow"), cex.names=0.3, xlab="Number of SNPs", border = c("darkgreen", "blue",  "brown", "brown"))
-  #legend(30, 120, c("Both", "Freezing", "Aridity", "Geography"), bty="n", fill=c("lightgreen", "lightblue",  "orange"), border = c( "darkgreen", "blue", "brown"), cex=1.5)
-  text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
-  text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
-  text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
-  text(10, 90, "Geography", col="brown", cex=1.5, adj=0)
-dev.off()
-```
-
-## Co-adaptation network
-
+### Set up contigdat with colors
 ```{r}
 ### snp_order is the object containing the dendogram describing the relationship among SNPs
 # snp_dist is the distance object
@@ -573,8 +530,71 @@ contigdat$col <- NA
   contigdat$col[match(names(ncol), contigdat$gtcontig)] = fills
   
 contigdat
-
 ```
+
+## Create Venn Tables
+```{r}
+limit.df <- results_pine3[results_pine3$Group1_logical,]
+dim(limit.df)
+
+### Overlap among SNPs
+a<- vennCounts(cbind(limit.df$cluster==1, # aridity
+                     limit.df$cluster==2, # geography
+                     limit.df$cluster==3, # freezing
+                     limit.df$cluster==4)) # multi
+# vennDiagram(a) note that this is meaningless b/c at SNP level
+
+### Overlap among contigs
+contig.group.df <- data.frame(
+  Aridity = table(limit.df$gtcontig,limit.df$cluster==1)[,2],
+  Geography = table(limit.df$gtcontig,limit.df$cluster==2)[,2],
+  Freezing = table(limit.df$gtcontig,limit.df$cluster==3)[,2],
+  Multi = table(limit.df$gtcontig,limit.df$cluster==4)[,2]
+)
+
+contig.group.df$index=1:nrow(contig.group.df)
+
+contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$Freezing,  contig.group.df$Aridity, contig.group.df$Geography, decreasing=TRUE),]
+
+head(contig.group.df)
+nrow(contig.group.df)
+
+# Num SNPs
+pdf("../results/PineVenn_cluster.pdf", width=6, height=10)
+  par(mar=c(4,6, 0,1))
+  barplot(t(as.matrix(contig.group.df[,c(4,3,1,2)])), beside = FALSE, horiz = TRUE, las=1, col=c("lightgreen", "lightblue",  "orange", "yellow"), cex.names=0.3, xlab="Number of SNPs", border = c("darkgreen", "blue",  "brown", "brown"))
+  #legend(30, 120, c("Both", "Freezing", "Aridity", "Geography"), bty="n", fill=c("lightgreen", "lightblue",  "orange"), border = c( "darkgreen", "blue", "brown"), cex=1.5)
+  text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
+  text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
+  text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
+  text(10, 90, "Geography", col="brown", cex=1.5, adj=0)
+dev.off()
+
+# HORIZONTAL
+contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$Aridity, contig.group.df$Freezing,   contig.group.df$Geography, decreasing=TRUE),]
+  toplot <- t(as.matrix(contig.group.df[,c(4,1,3,2)]))
+  head(toplot)
+  dim(toplot)
+  dim(contigdat)
+  m <- match(colnames(toplot), contigdat$gtcontig)
+  colnames(toplot)[1] 
+  contigdat$gtcontig[84]
+  colnames(toplot) <- contigdat$contigID[m]
+  
+pdf("../results/PineVenn_horiz.pdf", width=20, height=6)
+  par(mar=c(4,6, 0,1))
+  barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=c("lightgreen", "orange", "lightblue",  "yellow"), cex.names=1, cex.axis = 2,  border = c("darkgreen", "brown", "blue",  "brown"), cex=2)
+  #ylab="Number of SNPs", xlab= "Contig ID",
+  #legend(30, 120, c("Both", "Freezing", "Aridity", "Geography"), bty="n", fill=c("lightgreen", "lightblue",  "orange"), border = c( "darkgreen", "blue", "brown"), cex=1.5)
+  #text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
+  #text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
+  #text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
+  #text(10, 90, "Geography", col="brown", cex=1.5, adj=0)
+dev.off()
+```
+
+## Co-adaptation network
+
 
 
   
@@ -761,6 +781,110 @@ MakeDistNetwork(1, "Aridity", 0.1, colordf=contigdat)
 MakeDistNetwork(2, "Geography", 0.1, colordf=contigdat) 
 MakeDistNetwork(3, "Freezing", 0.1, colordf=contigdat) 
 MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat) 
+```
+
+
+## MAT vs. MAP with clusters
+
+```{r}
+
+#match SNP colors to contig dat
+# Cluster color for outline
+  #Aridity = table(limit.df$gtcontig,limit.df$cluster==1)[,2],
+  #Geography = table(limit.df$gtcontig,limit.df$cluster==2)[,2],
+  #Freezing = table(limit.df$gtcontig,limit.df$cluster==3)[,2],
+  #Multi = table(limit.df$gtcontig,limit.df$cluster==4)[,2]
+  #adjustcolor("yellow",0.5)("brown",0.5)
+  #adjustcolor("lightgreen",0.5) ("darkgreen",0.5)
+  #adjustcolor("orange",0.5) ("brown",0.5)
+  #adjustcolor("lightblue",0.5) adjustcolor("blue",0.5)
+  results_pine3$clustercol[results_pine3$cluster==1] = "brown"
+  results_pine3$clustercol[results_pine3$cluster==2] = "yellow"
+  results_pine3$clustercol[results_pine3$cluster==3] = "blue"
+  results_pine3$clustercol[results_pine3$cluster==4] = "green"
+  table(as.character(results_pine3$clustercol[results_pine3$Group1_logical]))
+  
+  # num snps
+  (t1 <- table(as.character(results_pine3$cluster[results_pine3$Group1_logical])))
+  sum(t1)
+  # num contigs
+  (t2<- sapply(1:4, function(x) length(table(results_pine3$gtcontig[results_pine3$cluster==x]))))
+  sum(t2)
+  
+# Contig color for points
+  mm <- match(results_pine3$gtcontig[results_pine3$Group1_logical], contigdat$gtcontig)
+  mm
+  results_pine3$contigcol[results_pine3$Group1_logical] <- contigdat$col[mm]
+
+pdf(file = "../results/GalaxyNew_inMATvMAP.pdf", width=12, height=8)
+
+#table(results_pine3$type[results_pine3$Group1_logical], clusMember)
+
+#quartz()
+### MAT VS MAP
+par(mfrow=c(2,3), mar=c(6,6,1,1))
+x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
+y <- results_pine3$MAP_raw_rho*results_pine3$Ances_flipNum
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between allele frequency and\nMean Annual Temperature", 
+       ylab= "Spearman's rho between allele frequency and\nMean Annual Precipitation" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=0.33, PElab=c("MAT", "MAP"))
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between allele frequency and\nMean Annual Temperature", 
+       ylab= "Spearman's rho between allele frequency and\nMean Annual Precipitation" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+x<- results_pine3$MAT_rhoave*results_pine3$Ances_flipNum
+y <- results_pine3$MAP_rhoave*results_pine3$Ances_flipNum
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between structure-corrected\nallele frequency and Mean Annual Temperature", 
+       ylab= "Spearman's rho between structure-corrected\nallele frequency and Mean Annual Precipitation" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+      x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+       PE=0.33, PElab=c("MAT", "MAP"))
+
+### ELEVATION VS LATITUDE
+x<- results_pine3$LAT_raw_rho*results_pine3$Ances_flipNum
+y <- results_pine3$ELEVATION_raw_rho*results_pine3$Ances_flipNum
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between allele frequency and Latitude", 
+       ylab= "Spearman's rho between allele frequency and Elevation" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=-0.48, PElab=c("ELEVATION", "LAT"))
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho betweenallele frequency and Latitude", 
+       ylab= "Spearman's rho between allele frequency and Elevation" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+       PE=-0.48, PElab=c("ELEVATION", "LAT"))
+
+x<- results_pine3$LAT_rhoave*results_pine3$Ances_flipNum
+y <- results_pine3$ELEVATION_rhoave*results_pine3$Ances_flipNum
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between structure-corrected\nallele frequency and Latitude", 
+       ylab= "Spearman's rho between structure-corrected\nallele frequency and Elevation" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+      x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+      PE=-0.48, PElab=c("ELEVATION", "LAT"))
+
+dev.off()
 ```
 
 
