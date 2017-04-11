@@ -6,6 +6,16 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+## April 11, 2017
+In my last couple posts, I had the allele coding backwards. Going down to the posts from last year, I see that the earlier letter in the alphabet was coded as 1, and the allele later in the alphabet was coded as 0.
+
+What I want to do is code the ancestral allele as a 0 and the derived allele as a 1.
+SO, this means:
+(if ancestral allele == earlier letter in alphabet)(flip = -1)
+(if ancestral allele == later letter in alphabet)(flip = 1)
+
+I discovered this because Jon had made some allele frequency plots, and the patterns were opposite to what I predicted.
+
 ## Mar 3, 2017
 I had some new breakthroughs this week. First, I realized that all I had to do was to use clustering to identify my SNP groups and it worked beautifully. There are 4 distinct clusters: Freezing, Aridity, Geography, and Super Multi. Coloring on the galaxy plot looks beautiful.
 
@@ -62,7 +72,7 @@ Katies-MacBook-Air:Desktop katie$ scp klott@hulk.zoology.ubc.ca:/data/seqcap/pin
 head_var_out_GATK3_allhet_pine688_ALL.table                   100% 5559     5.4KB/s   00:00    
 
 
-For example:  In our data, alleles are coded alphabetically, so that A would be coded as 0 and T coded as 1. 
+For example:  In our data, alleles are coded alphabetically, so that A would be coded as 0 and T coded as 1. (NOTE, THIS IS WRONG, SEE APRIL 11 POST)
 
 In lodgepole we observe a SNP at this site, with T occurring in higher frequency in COLD populations and A occurring in higher frequency in WARM populations. Current allele coding would give a negative correlation between allele frequency and temperature. 
 
