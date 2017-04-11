@@ -27,7 +27,7 @@ library(sp)
 library(maptools)
 library(ncf)
 
-
+library(igraph)
 library(graph)
 library(Rgraphviz)
 library(RBGL)
@@ -35,15 +35,6 @@ library(gRain)
 library(bnlearn)
 ```
 
-# example bayesian network
-```{r}
-a<- matrix(sample(c(1, 0), 15, TRUE), nrow=5, ncol=3)
-bn_df <- data.frame(a)
-head(bn_df)
-res <- hc(bn_df)
-res
-plot(res)
-```
 
 
 setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/simulations/")
@@ -190,6 +181,8 @@ cbind(numFPPerEnv1R, numFPPerEnv2R, numTPPerEnv1R, numTPPerEnv2R)
 
 ### Clustering plots
 
+
+
 ```{r}
 MakePlotDefault <- function(out,demog){
   sel_index <- length(which(out))-sum(which(out)>9900)+1 #index after which all under selection
@@ -246,6 +239,59 @@ MakePlotOrdered <- function(out, demog){
 ```
 
 ```{r}
+```
+
+```{r}
+### All 1R 
+  out <- rowSums(-log10(TrueEnv.P1R[,1:22])>Bonferroni_P_N)>0
+  MakePlotDefault(out, "1R")
+  MakePlotOrdered(out, "1R")
+  forh1R <- TrueEnv.rho1R[out, 1:22]
+  forh1Rdist<- dist(abs(forh1R))
+  h1R <- hclust(forh1Rdist)
+  h1R_clustmem <- cutree(h1R, 4)
+  snp_distmat <- as.matrix(forh1Rdist)
+  #clustnum=2
+  #shortclust <- h1R_clustmem 
+  #snp_distmat_multi <- snp_distmat[shortclust ==clustnum, shortclust ==clustnum]  
+  snp_distmat_multi <- snp_distmat 
+  d4_multi <- myFun(as.dist(snp_distmat_multi))
+  head(d4_multi)
+   (nedges <- nrow(d4_multi %>%
+    filter(abs(value) < disthreshold)))
+  
+  print(c("Number of edges:", nedges))
+  if(nedges > 30000){print("Too many edges"); break}
+  graph_cors <- d4_multi %>%
+    filter(value < disthreshold) %>% #filter to close distances
+    graph_from_data_frame(directed = FALSE)
+   V(graph_cors)$name
+   
+    toadd <- !(rownames(snp_distmat_multi) %in% V(graph_cors)$name)
+    sum(toadd)
+    graph_cors2 <- add_vertices(graph_cors, nv = sum(toadd, na.rm=TRUE), name= rownames(snp_distmat_multi)[toadd])
+    V(graph_cors2)$name
+    sum(!(rownames(snp_distmat_multi) %in% V(graph_cors2)$name))
+    graph_cors <- graph_cors2
+   
+    png(file = paste("../results/SimNetworkDist2Hist", filename,".pdf", sep=""), width=15, height=15, units="in", res=300)
+    hist(d4_multi$value)
+   lines(x=c(disthreshold, disthreshold), y=c(0,1000), col="blue", lwd=5)
+   dev.off()
+   
+   #mycol="black"
+    ggraph(graph_cors, layout="kk") +
+    geom_edge_fan2(aes(edge_alpha = 0.01)) +
+    guides(edge_alpha = "none", edge_width = "none") +
+    #scale_edge_colour_gradientn(limits = c(-1, 1), 
+    #                            colors = c("firebrick2", "dodgerblue2")) +
+    geom_node_point(size = 10) +
+    geom_node_text(aes(label = V(graph_cors)$name, size=0.1)) +
+    theme_graph() +
+    labs(title = filename)
+   
+   
+  ggsave(paste("../results/Network", filename,disthreshold, full_name,"dist.pdf", sep="_"), width=15, height=15, units="in")
 ```
 
 ```{r}

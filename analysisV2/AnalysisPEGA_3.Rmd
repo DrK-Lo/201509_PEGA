@@ -246,7 +246,7 @@ plot2Dcov(x=results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum,
 ```
 
 
-## Co-adaptation analysis
+## Co-association analysis
 The objective of the next section is to identify groups of SNPs that show similar patterns of association across the multivariate environment.
 
 This analysis consists of several steps:
@@ -580,12 +580,17 @@ contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$A
   colnames(toplot)[1] 
   contigdat$gtcontig[84]
   colnames(toplot) <- contigdat$contigID[m]
+  head(toplot)
+  col_toplot <- matrix(rep(contigdat$col[m], each=4), nrow=4)
+  head(col_toplot)
   
 pdf("../results/PineVenn_horiz.pdf", width=20, height=6)
-  par(mar=c(4,6, 0,1))
-  barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=c("lightgreen", "orange", "lightblue",  "yellow"), cex.names=1, cex.axis = 2,  border = c("darkgreen", "brown", "blue",  "brown"), cex=2)
-  #ylab="Number of SNPs", xlab= "Contig ID",
-  #legend(30, 120, c("Both", "Freezing", "Aridity", "Geography"), bty="n", fill=c("lightgreen", "lightblue",  "orange"), border = c( "darkgreen", "blue", "brown"), cex=1.5)
+  par(mar=c(4,6, 1,1))
+  barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=c("lightgreen", "orange", "lightblue",  "yellow"), cex.names=1, cex.axis = 2,  border = c("darkgreen", "brown", "blue",  "brown"), cex=2,  ylab="Number of SNPs", xlab= "Contig ID", ylim=c(0,50))
+  
+  #barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=col_toplot, cex.names=1, cex.axis = 2,  border = c("darkgreen", "orange", "blue",  "yellow"), cex=2)
+  
+  legend(80, 50, c("Multi", "Aridity", "Freezing",  "Geography"), bty="n", fill=c("lightgreen", "orange", "lightblue",  "yellow"), border = c("darkgreen", "brown", "blue",  "brown"), cex=1.5)
   #text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
   #text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
   #text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
@@ -683,24 +688,14 @@ colSums(table(results_pine3$gtcontig[results_pine3$Group1_logical], results_pine
 
 #### Need a function to reorder data to pairwise distances
 ```{r}
-  myFun <- function(inDist) {
-    if (class(inDist) != "dist") stop("wrong input type")
-    A <- attr(inDist, "Size")
-    B <- if (is.null(attr(inDist, "Labels"))) sequence(A) else attr(inDist, "Labels")
-    if (isTRUE(attr(inDist, "Diag"))) attr(inDist, "Diag") <- FALSE
-    if (isTRUE(attr(inDist, "Upper"))) attr(inDist, "Upper") <- FALSE
-    data.frame(
-      row = B[unlist(lapply(sequence(A)[-1], function(x) x:A))],
-      col = rep(B[-length(B)], (length(B)-1):1),
-      value = as.vector(inDist))
-  }
+source("myFunDist.R")
 ```
 
 #### Function to draw network based on distance matrix
 ```{r}
 shortclust <- results_pine3$cluster[results_pine3$Group1_logical]
 
-MakeDistNetwork <- function(clustnum, filename, disthreshold, colordf){
+MakeDistNetwork <- function(clustnum, filename, disthreshold, colordf, full_name=FALSE){
   
   ### Based on correlation in associations (co-association)
   #names(results_pine3)[env_cols]
@@ -746,7 +741,13 @@ MakeDistNetwork <- function(clustnum, filename, disthreshold, colordf){
     contigname = results_pine3$gtcontig[myo]
     
     myocol <- colordf$col[match(contigname, colordf$gtcontig)]
+    
+    if(full_name==FALSE){
     myoname <- colordf$contigID[match(contigname, colordf$gtcontig)]
+    }
+    if(full_name==TRUE){
+      myoname <- V(graph_cors)$name
+    }
     
     #(myocol <- results_pine3$clustercol[myo])
     #V(graph_cors)$name <- gsub("_", "\n",V(graph_cors)$name )
@@ -769,18 +770,108 @@ MakeDistNetwork <- function(clustnum, filename, disthreshold, colordf){
     theme_graph() +
     labs(title = filename)
    
-   ggsave(paste("../results/Network", filename,disthreshold, "dist.pdf", sep="_"), width=15, height=15, units="in")
-   
+
     #dev.off()
+    #cluster membership
+   mem=clusters(graph_cors)$membership
+   
+   # number edges for each node
+   nodenumedge <- sapply(V(graph_cors)$name, function(x) length(E(graph_cors)[from(V(graph_cors)[x])]))
+   
+   if(identical(names(nodenumedge), names(mem))){
+    return(data.frame(gtcontig_pos=names(mem), subcluster=mem, numedge=nodenumedge))
+   }else{
+     print("error: node names and edge names not identical")
+   }
+   
+  ggsave(paste("../results/Network", filename,disthreshold, full_name,"dist.pdf", sep="_"), width=15, height=15, units="in")
+   
 } # end function
 ```
 
 ```{r}
 colSums(table(results_pine3$gtcontig[results_pine3$Group1_logical], results_pine3$cluster[results_pine3$Group1_logical]))
-MakeDistNetwork(1, "Aridity", 0.1, colordf=contigdat) 
-MakeDistNetwork(2, "Geography", 0.1, colordf=contigdat) 
-MakeDistNetwork(3, "Freezing", 0.1, colordf=contigdat) 
-MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat) 
+results_pine3$subcluster <- NA
+results_pine3$numedges <- NA
+results_pine3$allele <- NA
+
+#### Multi Dist Network ####
+mm <- MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat) 
+  head(mm)
+  ### Assign subcluster membership and number edges
+  mind <- match(mm$gtcontig_pos, results_pine3$gtcontig_pos)
+  results_pine3$subcluster[mind] <- mm$subcluster
+  results_pine3$numedges[mind] <- mm$numedge
+  ### Assign allele ID based on sign of association determined from data vis
+  ### For Multi group is it MAT
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]>0]<- "+"
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]<0]<- "-"
+  which(names(results_pine3)=="MAT_raw_rho")      
+  results_pine3[mind, c(197,401:412)]
+  # Number of alleles "evolving" in each direction relative to ancestor
+  table(results_pine3$allele[mind])  
+  # direction of SNPs in each contig
+  table(results_pine3$gtcontig[mind], results_pine3$allele[mind])
+
+#### Aridity Dist Network ####
+mm <- MakeDistNetwork(1, "Aridity", 0.1, colordf=contigdat) 
+  head(mm)
+  ### Assign subcluster membership and number edges
+  mind <- match(mm$gtcontig_pos, results_pine3$gtcontig_pos)
+  results_pine3$subcluster[mind] <- mm$subcluster
+  results_pine3$numedges[mind] <- mm$numedge
+  ### Assign allele ID based on sign of association determined from data vis
+  ### For Aridity group is it MAT
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]>0]<- "+"
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]<0]<- "-"
+  results_pine3[mind, c(197,401:412)]
+  table(results_pine3$allele[mind]) 
+  # direction of SNPs in each contig
+  table(results_pine3$gtcontig[mind], results_pine3$allele[mind])
+  
+#### Geography Dist Network ####
+mm <- MakeDistNetwork(2, "Geography", 0.1, colordf=contigdat) 
+  head(mm)
+  ### Assign subcluster membership and number edges
+  mind <- match(mm$gtcontig_pos, results_pine3$gtcontig_pos)
+  results_pine3$subcluster[mind] <- mm$subcluster
+  results_pine3$numedges[mind] <- mm$numedge
+  ### Assign allele ID based on sign of association determined from data vis
+  ### For Geography group is it MAT ????
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]>0]<- "+"
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]<0]<- "-"
+  results_pine3[mind, c(197,401:412)]
+  table(results_pine3$allele[mind]) 
+  # direction of SNPs in each contig
+  table(results_pine3$gtcontig[mind], results_pine3$allele[mind])
+  
+#### Freezing Dist Network ####
+mm <- MakeDistNetwork(3, "Freezing", 0.1, colordf=contigdat)
+  head(mm)
+  ### Assign subcluster membership and number edges
+  mind <- match(mm$gtcontig_pos, results_pine3$gtcontig_pos)
+  results_pine3$subcluster[mind] <- mm$subcluster
+  results_pine3$numedges[mind] <- mm$numedge
+  ### Assign allele ID based on sign of association determined from data vis
+  ### For Freezing group is it LAT & Elevation
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]>0]<- "+"
+    results_pine3$allele[mind][results_pine3$MAT_raw_rho[mind]*results_pine3$Ances_flipNum[mind]<0]<- "-"
+  results_pine3[mind, c(197,401:412)]
+  # total num SNPs increasing in freq in each direction of MAT
+  table(results_pine3$allele[mind]) 
+  # direction of SNPs in each contig
+  table(results_pine3$gtcontig[mind], results_pine3$allele[mind])
+  
+  write.csv(results_pine3[results_pine3$Group1_logical,], file = "../results/PineTopCandidates.csv")
+
+
+  table(results_pine3$cluster, results_pine3$pine_super_convergent)
+    # super convergent SNPs found in elevation freezing group
+### 
+MakeDistNetwork(1, "Aridity", 0.05, colordf=contigdat, full_name = TRUE) 
+MakeDistNetwork(2, "Geography", 0.1, colordf=contigdat, full_name = TRUE) 
+MakeDistNetwork(3, "Freezing", 0.05, colordf=contigdat, full_name = TRUE) 
+MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat, full_name = TRUE) 
 ```
 
 
@@ -816,13 +907,13 @@ MakeDistNetwork(4, "Multi", 0.1, colordf=contigdat)
   mm
   results_pine3$contigcol[results_pine3$Group1_logical] <- contigdat$col[mm]
 
-pdf(file = "../results/GalaxyNew_inMATvMAP.pdf", width=12, height=8)
+pdf(file = "../results/GalaxyNew_inMATvMAP2.pdf", width=12, height=12)
 
 #table(results_pine3$type[results_pine3$Group1_logical], clusMember)
 
 #quartz()
 ### MAT VS MAP
-par(mfrow=c(2,3), mar=c(6,6,1,1))
+par(mfrow=c(3,3), mar=c(6,6,1,1))
 x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
 y <- results_pine3$MAP_raw_rho*results_pine3$Ances_flipNum
 
@@ -853,38 +944,69 @@ galaxyplot(x=x, y=y,
        sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
        PE=0.33, PElab=c("MAT", "MAP"))
 
-### ELEVATION VS LATITUDE
-x<- results_pine3$LAT_raw_rho*results_pine3$Ances_flipNum
+### MAT VS ELVATION
+x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
 y <- results_pine3$ELEVATION_raw_rho*results_pine3$Ances_flipNum
 
 galaxyplot(x=x, y=y, 
-       xlab= "Spearman's rho between allele frequency and Latitude", 
+       xlab= "Spearman's rho between allele frequency and and Mean Annual Temperature", 
        ylab= "Spearman's rho between allele frequency and Elevation" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=-0.48, PElab=c("ELEVATION", "LAT"))
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=-0.48, PElab=c("MAT", "ELEVATION"))
 
 galaxyplot(x=x, y=y, 
-       xlab= "Spearman's rho betweenallele frequency and Latitude", 
+       xlab= "Spearman's rho betweenallele frequency and Mean Annual Temperature", 
        ylab= "Spearman's rho between allele frequency and Elevation" , 
        nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
        x_sub=x[results_pine3$Group1_logical], 
        y_sub=y[results_pine3$Group1_logical],
        sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
        sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
-       PE=-0.48, PElab=c("ELEVATION", "LAT"))
+       PE=-0.48, PElab=c("MAT", "ELEVATION"))
 
-x<- results_pine3$LAT_rhoave*results_pine3$Ances_flipNum
+x<- results_pine3$MAT_rhoave*results_pine3$Ances_flipNum
 y <- results_pine3$ELEVATION_rhoave*results_pine3$Ances_flipNum
 galaxyplot(x=x, y=y, 
-       xlab= "Spearman's rho between structure-corrected\nallele frequency and Latitude", 
+       xlab= "Spearman's rho between structure-corrected\nallele frequency and Mean Annual Temperature", 
        ylab= "Spearman's rho between structure-corrected\nallele frequency and Elevation" , 
        nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
       x_sub=x[results_pine3$Group1_logical], 
        y_sub=y[results_pine3$Group1_logical],
        sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
        sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
-      PE=-0.48, PElab=c("ELEVATION", "LAT"))
+      PE=-0.48, PElab=c("MAT", "ELEVATION"))
+
+### MAT VS LAT
+x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
+y <- results_pine3$LAT_raw_rho*results_pine3$Ances_flipNum
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between allele frequency and and Mean Annual Temperature", 
+       ylab= "Spearman's rho between allele frequency and Latitude" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=-0.48, PElab=c("MAT", "LAT"))
+
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho betweenallele frequency and Mean Annual Temperature", 
+       ylab= "Spearman's rho between allele frequency and Latitude" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+       PE=-0.48, PElab=c("MAT", "LAT"))
+
+x<- results_pine3$MAT_rhoave*results_pine3$Ances_flipNum
+y <- results_pine3$LAT_rhoave*results_pine3$Ances_flipNum
+galaxyplot(x=x, y=y, 
+       xlab= "Spearman's rho between structure-corrected\nallele frequency and Mean Annual Temperature", 
+       ylab= "Spearman's rho between structure-corrected\nallele frequency and Latitude" , 
+       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
+      x_sub=x[results_pine3$Group1_logical], 
+       y_sub=y[results_pine3$Group1_logical],
+       sub_outlinecolor = results_pine3$clustercol[results_pine3$Group1_logical],
+       sub_bgcolor = results_pine3$contigcol[results_pine3$Group1_logical],
+      PE=-0.48, PElab=c("MAT", "LAT"))
 
 dev.off()
 ```
 
-
+## Designate alleles
