@@ -83,13 +83,13 @@ Get incides for different groups of columns in the dataframe
 ### Step 1: Identify top candidate contigs from Yeaman et al. 2016 and identify top candidate SNPs within those contigs
 
 ```{r,label="Top SNP's from Sam's top candidates" }
-### Set up logical dataframe for identifying outliers     
-  is.superdf <- matrix(NA, nrow(superdf), length(cols_raw))
-  colnames(is.superdf) <- names(results_pine3)[cols_raw]
-  
+
 ### Subset entire data to top contigs  
   superdf <- results_pine3[results_pine3$pine_super_p9 | 
                            results_pine3$pine_super_raw_p9,]
+### Set up logical dataframe for identifying outliers     
+  is.superdf <- matrix(NA, nrow(superdf), length(cols_raw))
+  colnames(is.superdf) <- names(results_pine3)[cols_raw]
 
 
 ### Identify top candidate SNPs within those contigs
@@ -205,48 +205,13 @@ Here, I am just comparing the patterns between the alphabetical coding and the a
 ```{r}
 sum(results_pine3$Group1_logical)
 sum(results_pine3$Group1_logical & !is.na(results_pine3$Ances_flipNum), na.rm=TRUE)
+  # number of top candidate SNPs that we have ancestral state for
 
 names(results_pine3)[grep("MAT", names(results_pine3))]
-
-par(mfrow=c(2,1))
-plot2Dcov(x=results_pine3$MAT_rhoave,
-       y=results_pine3$MAP_rhoave, 
-       xlab= "MAT rho Bayenv", 
-       ylab= "MAP rho Bayenv" , 
-       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub_orange=results_pine3$MAT_rhoave[results_pine3$Group1_logical], 
-       y_sub_orange=results_pine3$MAP_rhoave[results_pine3$Group1_logical],
-       PE=0.33, PElab=c("MAT", "MAP"))
-
-plot2Dcov(x=results_pine3$MAT_rhoave*results_pine3$Ances_flipNum,
-       y=results_pine3$MAP_rhoave*results_pine3$Ances_flipNum, 
-       xlab= "MAT rho Bayenv", 
-       ylab= "MAP rho Bayenv" , 
-       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub_orange=results_pine3$MAT_rhoave[results_pine3$Group1_logical]*results_pine3$Ances_flipNum[results_pine3$Group1_logical], 
-       y_sub_orange=results_pine3$MAP_rhoave[results_pine3$Group1_logical]*results_pine3$Ances_flipNum[results_pine3$Group1_logical],
-       PE=0.33, PElab=c("MAT", "MAP"))
-
-plot2Dcov(x=results_pine3$MAT_raw_rho,
-       y=results_pine3$MAP_raw_rho, 
-       xlab= "MAT rho raw", 
-       ylab= "MAP rho raw" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       x_sub_orange=results_pine3$MAT_raw_rho[results_pine3$Group1_logical], 
-       y_sub_orange=results_pine3$MAP_raw_rho[results_pine3$Group1_logical])
-
-plot2Dcov(x=results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum,
-       y=results_pine3$MAP_raw_rho*results_pine3$Ances_flipNum, 
-       xlab= "MAT rho raw", 
-       ylab= "MAP rho raw" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       x_sub_orange=results_pine3$MAT_raw_rho[results_pine3$Group1_logical]*results_pine3$Ances_flipNum[results_pine3$Group1_logical], 
-       y_sub_orange=results_pine3$MAP_raw_rho[results_pine3$Group1_logical]*results_pine3$Ances_flipNum[results_pine3$Group1_logical],
-       PE=0.33, PElab=c("MAT", "MAP"))
 ```
 
 
-## Co-association analysis
+## Co-association network analysis
 The objective of the next section is to identify groups of SNPs that show similar patterns of association across the multivariate environment.
 
 This analysis consists of several steps:
@@ -261,8 +226,9 @@ This analysis consists of several steps:
 
 5) Use galaxy plots to interpret individual SNP correlations in multiple environments relative to the ancestral state.
 
+Load the Pine environmental data and determine cluster relationships among environments
 ```{r}
-### 1) Load the Pine environmental data and determine cluster relationships among environments
+### 
   # Option 1: 
   load("../data/PineHeatmap.Rdata")
   # loads env_clust - this cluster object was not based on signed associations and led to some weird clustering
@@ -299,9 +265,11 @@ This analysis consists of several steps:
               left.label.size = 1, bottom.label.size =  0.25,
               bottom.label.text.angle = 90)
     dev.off()
+```
 
 
-# First, take absolute value of the SNP effect sizes b/c of signed nature of alleles
+First, take absolute value of the SNP effect sizes b/c of signed nature of alleles
+```{r}
 results_pine3$gtcontig_pos <-  paste(results_pine3$gtcontig, results_pine3$pos_gcontig, sep="_")
 labs <- results_pine3$gtcontig_pos
 labs2 <- gsub("_c0_seq1",replacement = "",labs)
@@ -309,30 +277,33 @@ labs3 <- gsub("_c1_seq1",replacement = "",labs2)
 labs4 <- gsub("_c4_seq1",replacement = "",labs3)
 results_pine3$gtcontig_pos <- labs4
 
-snp_mat <- abs(results_pine3[results_pine3$Group1_logical, env_cols])
-rownames(snp_mat) <- results_pine3$gtcontig_pos[results_pine3$Group1_logical]
-head(snp_mat)
-snp_dist <- dist(snp_mat, diag=TRUE, upper=TRUE)
-str(snp_dist)
-snp_order <- hclust(snp_dist)
-head(snp_order$labels[snp_order$order])
+# Distance matrix and hierarchical cluster based on association patterns
+  snp_mat <- abs(results_pine3[results_pine3$Group1_logical, env_cols])
+  rownames(snp_mat) <- results_pine3$gtcontig_pos[results_pine3$Group1_logical]
+  head(snp_mat)
+  snp_dist <- dist(snp_mat, diag=TRUE, upper=TRUE)
+  str(snp_dist)
+  snp_order <- hclust(snp_dist)
+  head(snp_order$labels[snp_order$order])
 
-clusMember = cutree(snp_order, 4)
-table(clusMember)
-length(clusMember)
-results_pine3$cluster[results_pine3$Group1_logical] <- clusMember
+# Assign cluster membership
+  clusMember = cutree(snp_order, 4)
+  table(clusMember)
+  length(clusMember)
+  results_pine3$cluster[results_pine3$Group1_logical] <- clusMember
+    # 1 is Aridity, 2 is geography, 3 is freezing and 4 is multi
 
 
-table(results_pine3$cluster)
-
-sample1 = abs(results_pine3[results_pine3$Group1_logical, env_cols])
-colnames(sample1) <- sub("_raw_rho", "", colnames(sample1))
-colnames(sample1)
-#need to match this to the environmental clustering
-dim(sample1)
-m <- match(env_clust$labels[env_clust$order], colnames(sample1))
-sample <- sample1[,m]
-colnames(sample)
+# Match order environments in SNPs to order of environments by their associations with each other
+  sample1 = abs(results_pine3[results_pine3$Group1_logical, env_cols])
+  colnames(sample1) <- sub("_raw_rho", "", colnames(sample1))
+  colnames(sample1)
+  #need to match this to the environmental clustering
+  dim(sample1)
+  
+  m <- match(colnames(cormat2), colnames(sample1))
+  sample <- sample1[,m]
+  colnames(sample)
 
 png("../results/dendogram_ordered.png", width=12, height=9, units = "in", res=500)
 superheat(t(sample), 
@@ -345,194 +316,25 @@ dev.off()
 
 
 ### Compare pattern to structure-corrected rho
-
-sample_bayenv = (results_pine3[results_pine3$Group1_logical, cols_bayenvrho])
-colnames(sample_bayenv) <- sub("_rhoave", "", colnames(sample))
-dim(sample_bayenv)
-m <- match(env_clust$labels[env_clust$order], colnames(sample_bayenv))
-sample_bv2 <- sample_bayenv[,m]
-colnames(sample_bv2)
-
-png("../results/dendogram_ordered_bayenv.png", width=12, height=9, units = "in", res=500)
-  superheat(t(abs(sample_bv2)), 
-          order.rows=1:22, #rev(env_clust_old$rowInd),
-          heat.pal = (brewer.pal(5, "Blues")),
-          heat.na.col = "white",
-          col.dendrogram = TRUE, row.dendrogram = TRUE,
-            left.label.size = 0.2,
-        order.cols = snp_order$order)
-dev.off()
-```
-
-
-## MAT vs. MAP with clusters
-
-```{r}
-
-pdf(file = "../results/Clustering_inMATvMAP.pdf", width=7, height=7)
-
-#table(results_pine3$type[results_pine3$Group1_logical], clusMember)
-
-#quartz()
-par(mfrow=c(1,1), mar=c(4,4,1,1))
-x<- results_pine3$MAT_raw_rho*results_pine3$Ances_flipNum
-y <- results_pine3$MAP_raw_rho*results_pine3$Ances_flipNum
-
-galaxyplot(x=x, y=y, 
-       xlab= "Spearman's rho between allele frequency and MAT", 
-       ylab= "Spearman's rho between allele frequency and MAP" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),PE=0.33, PElab=c("MAT", "MAP"))
-
-plot2Dcov(x=x, y=y, 
-       xlab= "Spearman's rho betweenallele frequency and MAT", 
-       ylab= "Spearman's rho between allele frequency and MAP" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       x_sub_orange=x[results_pine3$cluster==1], 
-       y_sub_orange=y[results_pine3$cluster==1],
-       x_sub_blue=x[results_pine3$cluster==3], 
-       y_sub_blue=y[results_pine3$cluster==3],
-       x_sub_green=x[results_pine3$cluster==4], 
-       y_sub_green=y[results_pine3$cluster==4], 
-       x_sub_yellow=x[results_pine3$cluster==2], 
-       y_sub_yellow=y[results_pine3$cluster==2], 
-       plot_greenCOV = FALSE, plot_orangeCOV = FALSE, 
-       plot_blueCOV = FALSE, plot_yellowCOV = FALSE,
-       PE=0.33, PElab=c("MAT", "MAP"))
-  #text(-0.25,0.25, "C",cex=1.5)
-#dev.off()
-
-#quartz()
-par(mfrow=c(1,1), mar=c(4,6,1,1))
-x<- results_pine3$MAT_rhoave*results_pine3$Ances_flipNum
-y <- results_pine3$MAP_rhoave*results_pine3$Ances_flipNum
-plot2Dcov(x=x, y=y, 
-       xlab= "Spearman's rho between structure-corrected allele frequency and MAT", 
-       ylab= "Spearman's rho between structure-corrected\nallele frequency and MAP" , 
-       nbin=100, xlim=c(-0.3,0.3), ylim=c(-0.3,0.3),
-       x_sub_orange=x[results_pine3$cluster==1], 
-       y_sub_orange=y[results_pine3$cluster==1],
-       x_sub_blue=x[results_pine3$cluster==3], 
-       y_sub_blue=y[results_pine3$cluster==3],
-       x_sub_green=x[results_pine3$cluster==4], 
-       y_sub_green=y[results_pine3$cluster==4], 
-       x_sub_yellow=x[results_pine3$cluster==2], 
-       y_sub_yellow=y[results_pine3$cluster==2], 
-       plot_greenCOV = FALSE, plot_orangeCOV = FALSE, 
-       plot_blueCOV = FALSE, plot_yellowCOV = FALSE,
-       PE=0.33, PElab=c("MAT", "MAP"))
-
-dev.off()
-```
-
-
-
-## Galaxy in multivariate environment raw 4 clusters
-```{r}
-
-whichvars <- c("LAT", "ELEVATION", "MAT","MAP", "CMD") #Eref
-
-pdf("../results/multvariateEnviGalaxy4clusters.pdf", width=22, height=20)
-par(mfrow=c(length(whichvars), length(whichvars)), mar=c(0.3,0.7,0,0.7), oma=c(10,10,0,0))
-for (i in 1:length(whichvars)){
-  for (j in 1:length(whichvars)){
-    if(i==j){
-      plot(1,1,bty="n", xaxt="n", yaxt="n", xlab="", ylab="", col="white")
-      text(1,1, whichvars[i], cex=5)  
-    }
-    if(j>i){
-      plot(1,1,bty="n", xaxt="n", yaxt="n", xlab="", ylab="", col="white")
-      if(j==2 & i==1){
-        legend(1,1, legend = c("Freezing", "Aridity", "Multi", "Geography"), 
-               pch=c(22,24,21), cex=4, bty="n",xjust=0.5,yjust=0.5,
-               col=c("blue", "brown", "darkgreen", "brown"), 
-               pt.bg=c("lightblue", "orange", "lightgreen", "yellow"))
-      }
-    }
-      
-    if(i>j){
-      print(c(i,j))
-      print(c(whichvars[j], whichvars[i]))
-      # Get EE corr
-      ri <- grep(paste("^",whichvars[j],sep=""),rownames(cormat2)) #env_clust$carpet))
-      cj <- grep(paste("^",whichvars[i],sep=""),colnames(cormat2))#env_clust$carpet))
-      print(c(rownames(cormat2)[ri], colnames(cormat2)[cj]))
-      PE<- round(cormat2[ri,cj],2)
-      
-      whichx <- which(names(results_pine3)==paste(whichvars[j], "_raw_rho", sep=""))
-      whichy <- which(names(results_pine3)==paste(whichvars[i], "_raw_rho", sep=""))
-      print(names(results_pine3)[c(whichx,whichy)])
-      x <- results_pine3[,whichx]*results_pine3$Ances_flipNum
-      y <- results_pine3[,whichy]*results_pine3$Ances_flipNum
-      
-      plot2Dcov(x=x,
-       y=y, 
-       xlab= "", 
-       ylab= "" , 
-       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
-       x_sub_orange=x[results_pine3$cluster==1], 
-       y_sub_orange=y[results_pine3$cluster==1],
-       x_sub_blue=x[results_pine3$cluster==3], 
-       y_sub_blue=y[results_pine3$cluster==3],
-       x_sub_green=x[results_pine3$cluster==4], 
-       y_sub_green=y[results_pine3$cluster==4], 
-       x_sub_yellow=x[results_pine3$cluster==2], 
-       y_sub_yellow=y[results_pine3$cluster==2], 
-       plot_greenCOV = FALSE, plot_orangeCOV = FALSE, 
-       plot_blueCOV = FALSE, plot_yellowCOV = FALSE,
-       PE=PE, PElab=c(whichvars[i], whichvars[j]))
-    } # end if
-  } # end j
-} # end i
-  mtext(text = "Correlation between allele frequency and environment (in column)", side=1, outer=TRUE, line=5, cex=3, adj=0.1)
-  mtext(text = "Correlation between allele frequency and environment (in row)", side=2, outer=TRUE, line=5, cex=3, adj=0.1)
-dev.off()
-```
-
-
-### Set up contigdat with colors
-```{r}
-### snp_order is the object containing the dendogram describing the relationship among SNPs
-# snp_dist is the distance object
-snp_distmat <- (as.matrix(snp_dist))
-
-results_pine3$clustercol <- results_pine3$cluster
-
-contigdat <- data.frame(gtcontig = levels(factor(results_pine3$gtcontig[results_pine3$Group1_logical])),
-          contigID = 1:108)
-contigdat$col <- NA
-
-# Aridity
-  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==1])
-  ncol
-  arid.fills <- adjustcolor(two.colors(n=length(ncol), start="brown2", middle= "orange", end="darkorange4"),alpha=0.9)
-  plot(1:length(arid.cols), col=arid.fills, pch=19, cex=2)
-  contigdat$col[match(names(ncol), contigdat$gtcontig)] = arid.fills
-
-# Multi
-  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==4])
-  ncol
-  contigdat$col[match(names(ncol), contigdat$gtcontig)] <- adjustcolor(c("#DAF7A6", "chartreuse4", "#28B463"), alpha=0.9)
-
-# Geog
-  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==2])
-  ncol
-  length(ncol)
-   fills <- adjustcolor(two.colors(n=length(ncol), start="gold", middle= "peachpuff", end="lightgoldenrod3"),alpha=0.9)
-  plot(1:length(fills), col=fills, pch=19, cex=2)
-  contigdat$col[match(names(ncol), contigdat$gtcontig)] = fills
-
-# Freezing
-  ncol <- table(results_pine3$gtcontig[results_pine3$cluster==3])
-  ncol
-  length(ncol)
-   fills <- adjustcolor(two.colors(n=length(ncol), start="darkturquoise", middle= "darkslategrey", end="dodgerblue"),alpha=0.9)
-  plot(1:length(fills), col=fills, pch=19, cex=2)
-  contigdat$col[match(names(ncol), contigdat$gtcontig)] = fills
+  sample_bayenv = (results_pine3[results_pine3$Group1_logical, cols_bayenvrho])
+  colnames(sample_bayenv) <- sub("_rhoave", "", colnames(sample_bayenv))
+  dim(sample_bayenv)
+  m <- match(colnames(cormat2), colnames(sample_bayenv))
+  sample_bv2 <- sample_bayenv[,m]
+  colnames(sample_bv2)
   
-contigdat
+  png("../results/dendogram_ordered_bayenv.png", width=12, height=9, units = "in", res=500)
+    superheat(t(abs(sample_bv2)), 
+            order.rows=1:22, #rev(env_clust_old$rowInd),
+            heat.pal = (brewer.pal(5, "Blues")),
+            heat.na.col = "white",
+            col.dendrogram = TRUE, row.dendrogram = TRUE,
+              left.label.size = 0.2,
+          order.cols = snp_order$order)
+  dev.off()
 ```
-
-## Create Venn Tables
+  
+## Create Venn Table
 ```{r}
 limit.df <- results_pine3[results_pine3$Group1_logical,]
 dim(limit.df)
@@ -546,150 +348,93 @@ a<- vennCounts(cbind(limit.df$cluster==1, # aridity
 
 ### Overlap among contigs
 contig.group.df <- data.frame(
+  Multi = table(limit.df$gtcontig,limit.df$cluster==4)[,2],
   Aridity = table(limit.df$gtcontig,limit.df$cluster==1)[,2],
-  Geography = table(limit.df$gtcontig,limit.df$cluster==2)[,2],
   Freezing = table(limit.df$gtcontig,limit.df$cluster==3)[,2],
-  Multi = table(limit.df$gtcontig,limit.df$cluster==4)[,2]
+  Geography = table(limit.df$gtcontig,limit.df$cluster==2)[,2]
 )
 
-contig.group.df$index=1:nrow(contig.group.df)
+# order
+contig.group.df$group <- apply(contig.group.df[,1:4],1, FUN = function(x)(which(x==max(x))))
+contig.group.df$nout <- rowSums(contig.group.df[,1:4])
 
-contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$Freezing,  contig.group.df$Aridity, contig.group.df$Geography, decreasing=TRUE),]
+contig.group.df<- contig.group.df[order(contig.group.df$group,contig.group.df$nout, decreasing=c(FALSE, TRUE),method="radix"),]
+contig.group.df
 
-head(contig.group.df)
-nrow(contig.group.df)
+contig.group.df$ContigID <- 1:nrow(contig.group.df)
+  
+contig.group.df$col <- NA
+contig.group.df$gtcontig <- rownames(contig.group.df)
 
-# Num SNPs
-pdf("../results/PineVenn_cluster.pdf", width=6, height=10)
-  par(mar=c(4,6, 0,1))
-  barplot(t(as.matrix(contig.group.df[,c(4,3,1,2)])), beside = FALSE, horiz = TRUE, las=1, col=c("lightgreen", "lightblue",  "orange", "yellow"), cex.names=0.3, xlab="Number of SNPs", border = c("darkgreen", "blue",  "brown", "brown"))
-  #legend(30, 120, c("Both", "Freezing", "Aridity", "Geography"), bty="n", fill=c("lightgreen", "lightblue",  "orange"), border = c( "darkgreen", "blue", "brown"), cex=1.5)
-  text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
-  text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
-  text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
-  text(10, 90, "Geography", col="brown", cex=1.5, adj=0)
-dev.off()
+# Geog
+  whichones <- contig.group.df$group==4
+  ncol <- sum(whichones)
+  ncol
+   fills <- adjustcolor(two.colors(n=ncol, start="gold", middle= "peachpuff", 
+                                   end="lightgoldenrod3"),alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contig.group.df$col[whichones] = fills
+  text(1:length(fills), labels=paste(contig.group.df$gtcontig[whichones], 
+                                     contig.group.df$ContigID[whichones], sep="  "), cex=0.5)
+  
+# Aridity
+  whichones <- contig.group.df$group==2
+  ncol <- sum(whichones)
+  ncol
+  fills <- adjustcolor(two.colors(n=ncol, start="orange", middle= "brown2", end="darkorange4"),alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contig.group.df$col[whichones] = fills
+  text(1:length(fills), labels=paste(contig.group.df$gtcontig[whichones], 
+                                     contig.group.df$ContigID[whichones], sep="  "), cex=0.5)
+  
+# Multi
+  whichones <- contig.group.df$group==1
+  ncol <- sum(whichones)
+  ncol
+  fills <- adjustcolor(c("#DAF7A6", "chartreuse4", "#28B463"), alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contig.group.df$col[whichones] = fills
+  text(1:length(fills), labels=paste(contig.group.df$gtcontig[whichones], 
+                                     contig.group.df$ContigID[whichones], sep="  "), cex=0.5)
+  
 
-# HORIZONTAL
-contig.group.df<- contig.group.df[order(contig.group.df$Multi, contig.group.df$Aridity, contig.group.df$Freezing,   contig.group.df$Geography, decreasing=TRUE),]
-  toplot <- t(as.matrix(contig.group.df[,c(4,1,3,2)]))
+# Freezing
+  whichones <- contig.group.df$group==3
+  ncol <- sum(whichones)
+  ncol
+  fills <- adjustcolor(two.colors(n=ncol, start="darkturquoise", middle= "dodgerblue", end=,"darkslategrey"),alpha=0.9)
+  plot(1:length(fills), col=fills, pch=19, cex=2)
+  contig.group.df$col[whichones] = fills
+  text(1:length(fills), labels=paste(contig.group.df$gtcontig[whichones], 
+                                     contig.group.df$ContigID[whichones], sep="  "), cex=0.5)
+  
+  
+contig.group.df
+```
+
+
+Make Pine Venn Barplot with contig colors
+```{r}
+
+toplot <- t(as.matrix(contig.group.df[,1:4]))
   head(toplot)
   dim(toplot)
   dim(contigdat)
-  m <- match(colnames(toplot), contigdat$gtcontig)
-  colnames(toplot)[1] 
-  contigdat$gtcontig[84]
-  colnames(toplot) <- contigdat$contigID[m]
-  head(toplot)
-  col_toplot <- matrix(rep(contigdat$col[m], each=4), nrow=4)
-  head(col_toplot)
-  
+  colnames(toplot) <- contig.group.df$ContigID
+
 pdf("../results/PineVenn_horiz.pdf", width=20, height=6)
-  par(mar=c(4,6, 1,1))
-  barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=c("lightgreen", "orange", "lightblue",  "yellow"), cex.names=1, cex.axis = 2,  border = c("darkgreen", "brown", "blue",  "brown"), cex=2,  ylab="Number of SNPs", xlab= "Contig ID", ylim=c(0,50))
-  
-  #barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=col_toplot, cex.names=1, cex.axis = 2,  border = c("darkgreen", "orange", "blue",  "yellow"), cex=2)
-  
-  legend(80, 50, c("Multi", "Aridity", "Freezing",  "Geography"), bty="n", fill=c("lightgreen", "orange", "lightblue",  "yellow"), border = c("darkgreen", "brown", "blue",  "brown"), cex=1.5)
-  #text(40, 5, "Multi", col="darkgreen", cex=1.5, adj=0)
-  #text(15, 15, "Freezing", col="blue", cex=1.5, adj=0)
-  #text(15, 45, "Aridity", col="darkorange", cex=1.5, adj=0)
-  #text(10, 90, "Geography", col="brown", cex=1.5, adj=0)
+  par(mar=c(6,6, 1,1))
+  b<- barplot(toplot, beside = FALSE, horiz = FALSE, las=2, col=c("lightgreen", "orange", "lightblue",  "yellow"), cex.names=1, cex.axis = 2,  border = c("darkgreen", "brown", "blue",  "brown"), cex=2,  ylab="Number of SNPs", xlab= "Contig ID", ylim=c(-5,50), names.arg = rep("", 108), cex.lab=2)
+
+  legend(100, 30, c("Multi", "Aridity", "Freezing",  "Geography"), bty="n", fill=c("lightgreen", "orange", "lightblue",  "yellow"), border = c("darkgreen", "brown", "blue",  "brown"), cex=2)
+
+  points(b, rep(-1,108), pch=20, col=contig.group.df$col, cex=2)
+  text(b, rep(-2, 108), colnames(toplot), col=contig.group.df$col, srt=90, adj=1) 
 dev.off()
 ```
 
-## Co-adaptation network
 
-
-
-  
-#### Function to draw network based on correlations
-```{r}
-
-MakeCorNetwork <- function(clustnum, filename, corthreshold, colordf){
-  
-  ### Based on correlation in associations (co-association)
-  names(results_pine3)[env_cols]
-  multidat <- abs(results_pine3[which(results_pine3$cluster==clustnum), env_cols])
-  #str(multidat)
-  rownames(multidat) <- results_pine3$gtcontig_pos[which(results_pine3$cluster==clustnum)]
-  dim(multidat)
-  
-  tidy_cors <- t(multidat) %>% 
-    correlate() %>% 
-    stretch()
-  #head(tidy_cors)
-  
-  nedges <- nrow(tidy_cors %>%
-    filter(abs(r) > corthreshold))
-  
-  print(c("Number of edges:", nedges))
-  
-  graph_cors <- tidy_cors %>%
-    filter(abs(r) > corthreshold) %>%
-    graph_from_data_frame(directed = FALSE )
-  
-    #write_graph(tidy_cors %>%  filter(abs(r) > 0.75) %>% graph_from_data_frame(directed = FALSE ), file = paste("../results/NetworkCorr0",filename,".GML",sep=""), format="gml")
-    
-    #write.table(tidy_cors %>%  filter(abs(r) > 0.75) , file = paste("../results/NetworkCorr0",filename,".txt",sep=""), row.names=FALSE)
-  
-    # check node names
-    V(graph_cors)$name
-    toadd <- !(rownames(multidat) %in% V(graph_cors)$name)
-    graph_cors2 <- add_vertices(graph_cors, nv = sum(toadd, na.rm=TRUE), name= rownames(multidat)[toadd])
-    V(graph_cors2)$name
-    sum(!(rownames(multidat) %in% V(graph_cors2)$name))
-    graph_cors <- graph_cors2
-    
-    # line up names
-    (myo <- match(V(graph_cors)$name, results_pine3$gtcontig_pos))
-    
-    contigname = results_pine3$gtcontig[myo]
-    
-    myocol <- colordf$col[match(contigname, colordf$gtcontig)]
-    myoname <- colordf$contigID[match(contigname, colordf$gtcontig)]
-    
-    #(myocol <- results_pine3$clustercol[myo])
-    #V(graph_cors)$name <- gsub("_", "\n",V(graph_cors)$name )
-    #z <- cbind(myocol, V(graph_cors)$name, results_pine3$gtcontig_pos[myo])
-    
-   #print(table(z[,1])) #check against colors
-  
-   png(file = paste("../results/NetworkCorr2Hist", filename,".pdf", sep=""), width=15, height=15, units="in", res=300)
-   hist(tidy_cors$r)
-   dev.off()
-    #head(E(graph_cors)$r)
-#pdf(file = paste("../results/NetworkCorr", filename,".pdf", sep=""), width=15, height=15) #units="in", res=300)
-    ggraph(graph_cors, layout="kk") +
-    geom_edge_fan2(aes(edge_alpha = 0.01)) +
-    guides(edge_alpha = "none", edge_width = "none") +
-    #scale_edge_colour_gradientn(limits = c(-1, 1), 
-    #                            colors = c("firebrick2", "dodgerblue2")) +
-    geom_node_point(color = myocol, size = 10) +
-    geom_node_text(aes(label = myoname, size=0.1)) +
-    theme_graph() +
-    labs(title = filename)
-   
-   ggsave(paste("../results/Network", filename,corthreshold, "corr.pdf", sep="_"), width=15, height=15, units="in")
-   
-    #dev.off()
-} # end function
-```
-
-```{r}
-colSums(table(results_pine3$gtcontig[results_pine3$Group1_logical], results_pine3$cluster[results_pine3$Group1_logical]))
-#MakeCorNetwork(1, "Aridity", 0.99, colordf=contigdat) # 273
-#MakeCorNetwork(2, "Geography", 0.99, colordf=contigdat) # 191
-#MakeCorNetwork(3, "Freezing", 0.99, colordf=contigdat) # 153
-#MakeCorNetwork(4, "Multi", 0.99, colordf=contigdat) # 55
-```
-
-
-
-#### Need a function to reorder data to pairwise distances
-```{r}
-source("myFunDist.R")
-```
+## Co-association network
 
 #### Function to draw network based on distance matrix
 ```{r}
@@ -1009,4 +754,65 @@ galaxyplot(x=x, y=y,
 dev.off()
 ```
 
-## Designate alleles
+
+## Galaxy in multivariate environment raw 4 clusters
+```{r}
+
+whichvars <- c("LAT", "ELEVATION", "MAT","MAP", "CMD") #Eref
+
+pdf("../results/multvariateEnviGalaxy4clusters.pdf", width=22, height=20)
+par(mfrow=c(length(whichvars), length(whichvars)), mar=c(0.3,0.7,0,0.7), oma=c(10,10,0,0))
+for (i in 1:length(whichvars)){
+  for (j in 1:length(whichvars)){
+    if(i==j){
+      plot(1,1,bty="n", xaxt="n", yaxt="n", xlab="", ylab="", col="white")
+      text(1,1, whichvars[i], cex=5)  
+    }
+    if(j>i){
+      plot(1,1,bty="n", xaxt="n", yaxt="n", xlab="", ylab="", col="white")
+      if(j==2 & i==1){
+        legend(1,1, legend = c("Freezing", "Aridity", "Multi", "Geography"), 
+               pch=c(22,24,21), cex=4, bty="n",xjust=0.5,yjust=0.5,
+               col=c("blue", "brown", "darkgreen", "brown"), 
+               pt.bg=c("lightblue", "orange", "lightgreen", "yellow"))
+      }
+    }
+      
+    if(i>j){
+      print(c(i,j))
+      print(c(whichvars[j], whichvars[i]))
+      # Get EE corr
+      ri <- grep(paste("^",whichvars[j],sep=""),rownames(cormat2)) #env_clust$carpet))
+      cj <- grep(paste("^",whichvars[i],sep=""),colnames(cormat2))#env_clust$carpet))
+      print(c(rownames(cormat2)[ri], colnames(cormat2)[cj]))
+      PE<- round(cormat2[ri,cj],2)
+      
+      whichx <- which(names(results_pine3)==paste(whichvars[j], "_raw_rho", sep=""))
+      whichy <- which(names(results_pine3)==paste(whichvars[i], "_raw_rho", sep=""))
+      print(names(results_pine3)[c(whichx,whichy)])
+      x <- results_pine3[,whichx]*results_pine3$Ances_flipNum
+      y <- results_pine3[,whichy]*results_pine3$Ances_flipNum
+      
+      plot2Dcov(x=x,
+       y=y, 
+       xlab= "", 
+       ylab= "" , 
+       nbin=100, xlim=c(-0.8,0.8), ylim=c(-0.8,0.8),
+       x_sub_orange=x[results_pine3$cluster==1], 
+       y_sub_orange=y[results_pine3$cluster==1],
+       x_sub_blue=x[results_pine3$cluster==3], 
+       y_sub_blue=y[results_pine3$cluster==3],
+       x_sub_green=x[results_pine3$cluster==4], 
+       y_sub_green=y[results_pine3$cluster==4], 
+       x_sub_yellow=x[results_pine3$cluster==2], 
+       y_sub_yellow=y[results_pine3$cluster==2], 
+       plot_greenCOV = FALSE, plot_orangeCOV = FALSE, 
+       plot_blueCOV = FALSE, plot_yellowCOV = FALSE,
+       PE=PE, PElab=c(whichvars[i], whichvars[j]))
+    } # end if
+  } # end j
+} # end i
+  mtext(text = "Correlation between allele frequency and environment (in column)", side=1, outer=TRUE, line=5, cex=3, adj=0.1)
+  mtext(text = "Correlation between allele frequency and environment (in row)", side=2, outer=TRUE, line=5, cex=3, adj=0.1)
+dev.off()
+```

@@ -55,6 +55,7 @@ tail(Ances_df[lineup2,])
 results_pine3 <- data.frame(results_pine3, Ances_df[lineup2,])
 ncol(results_pine3)
 head(results_pine3[,c(1:20, 399:402)])
+identical(paste(results_pine3$gcontig, results_pine3$pos_gcontig), paste(results_pine3$CHROM, results_pine3$POS))
      
 levels(factor(results_pine3$Ances_flip))
 results_pine3$Ances_flipNum <- results_pine3$Ances_flip
@@ -66,24 +67,32 @@ results_pine3$major_allele <- as.character(results_pine3$major_allele)
 sum(results_pine3$Ances_flip %in% c(results_pine3$minor_allele, results_pine3$major_allele))/nrow(results_pine3)
   #80% of ancestral alleles match one of the SNPs in pine
 
+results_pine3$Ances_flip <- as.character(results_pine3$Ances_flip)
+
 flipnum <- rep(NA, nrow(results_pine3))
 for (i in 1:nrow(results_pine3)){
   if(i%%100000==0){print(i)}
   bob <- which(c(results_pine3$minor_allele[i], results_pine3$major_allele[i])==results_pine3$Ances_flip[i])
+    # which allele equals the ancestral allele
   boborder <- order(c(results_pine3$minor_allele[i], results_pine3$major_allele[i]))
-  # if the ancestral allele is one of alleles in pine SNP
+    # order the alleles in pine
+  
+  # the allele earlier in the alphabet is coded as a 1, later is a 0
   
   if(length(bob)>0){
     if (boborder[bob]==1){
       # the ancestral SNP is the allele that comes earlier in the alphabet
-    flipnum[i] <- 1
+      # the earlier allele was coded as 1, but now want coded as 0
+      flipnum[i] <- -1
     }
      # the ancestral SNP is NOT the allele that comes earlier in the alphabet
+     # the earlier allele is the derived allele and should be already coded as 1
     if(boborder[bob]==2){
-      flipnum[i] <- -1
+      flipnum[i] <- 1
     }
   }#end if length(bob) 
 }
+
 
 sum(!is.na(flipnum))/nrow(results_pine3)
 
