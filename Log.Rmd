@@ -6,6 +6,36 @@ output: html_document
 ---
 
 This log is in Blog-style format (newest at top)
+## May 9, 2017 Email to Jon D. about allele coding in landscape plots
+Hi Jon,
+
+I’m going over allele coding now and it’s not making sense. Can you double check your data for derived/ancestral alleles and how you’ve coded them in the color scheme?
+
+For example:
+1) katie_pine_comp7786_4259_MAT_1may2017 I have the major allele is a G (~80%) and the minor allele is a T (~20%). I also have that the ancestral allele is a G. Therefore, the pie charts should be mostly “black”. Pattern is opposite as expected.
+
+2) comp15605_4711
+I have the ancestral allele is a C, the major allele is a T (87%) and the minor allele is a C (13%). So, the pie charts should be mostly white. Pattern is opposite as expected.
+
+3) 
+comp52069_c0_seq1
+Major allele is C (87%), minor alle is A (13%), ancestral allele is C. So, pie charts should be mostly black. Pattern is opposite as expected.
+
+4) 
+comp1486_9654
+Ancestral allele is A, major allele is A (65%), so pie charts should be mostly black. Pattern is opposite as expected.
+
+5) 
+comp1486_9784
+Ancestral is T, minor allele is T (40%), so pie charts should be mostly white. Pattern is opposite as expected.
+ 
+I didn’t check the rest, but can you check my logic here? I swear that allele coding is another circle of hell. Once we get this right I am going to do something to celebrate!
+
+Thanks,
+
+Katie
+
+
 ## April 11, 2017
 In my last couple posts, I had the allele coding backwards. Going down to the posts from last year, I see that the earlier letter in the alphabet was coded as 1, and the allele later in the alphabet was coded as 0.
 

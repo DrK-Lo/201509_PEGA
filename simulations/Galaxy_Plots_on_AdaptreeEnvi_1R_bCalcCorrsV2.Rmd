@@ -1,0 +1,344 @@
+---
+title: "Galaxy_Plots_on_AdaptreeEnvi_1R_CalcCorrs"
+author: "Katie Lotterhos"
+date: "1/19/2017"
+output: html_document
+---
+
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/simulations/")
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if(!("ggplot2" %in% installed.packages())){install.packages("ggplot2")}
+if(!("gstat" %in% installed.packages())){install.packages("gstat")}
+if(!("sp" %in% installed.packages())){install.packages("sp")}   
+if(!("maptools" %in% installed.packages())){install.packages("maptools")} 
+if(!("ncf" %in% installed.packages())){install.packages("ncf")}   
+
+source("https://bioconductor.org/biocLite.R")
+biocLite("graph", suppressUpdates = TRUE)   
+biocLite("Rgraphviz", suppressUpdates = TRUE)
+biocLite("RBGL", suppressUpdates = TRUE)
+install.packages("gRain", dependencies = TRUE)
+install.packages("bnlearn")
+
+library(ggplot2)
+library(gstat)
+library(sp)
+library(maptools)
+library(ncf)
+
+library(igraph)
+library(ggraph)
+library(graph)
+library(Rgraphviz)
+library(RBGL)
+library(gRain)
+library(bnlearn)
+  require(dplyr)
+
+  library(extrafont) 
+    #font_import() 
+  loadfonts()
+source("../analysisV2/myFunDist.R")
+```
+
+
+### Load data
+```{r}
+### envi
+### This is the Adaptree environments overlaid onto our sampling design
+env <- read.table("data/results_AdaptreeEnviFor_R90.txt", header=TRUE)
+names(env)
+names(env)[13] <- "MAP"
+names(env)[14] <- "MSP"
+
+### Simulations
+#snps <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.lfmm")
+#env_sim <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20.env")
+#df <- read.table("data/LW2015data/1R_R90_1351142954_453_1_NumPops=90_NumInd=20Bayenv2LFMMpca.Cpval", header=TRUE)
+
+headdir <- "data/LW2015data/"
+snps_file <- "1R_R90_1351142970_988_5_NumPops=90_NumInd=20.lfmm"
+
+
+EvaluateNetworkOnSims <- function(snps_file, headdir){
+  print("++++++++++++++++++++++++++++++++++++++")
+  print(snps_file)
+snps <- read.table(paste(headdir,snps_file, sep=""))
+env_snps <- read.table(paste(headdir,gsub(".lfmm", ".env", snps_file), sep=""))
+results <- read.table(paste(headdir,gsub(".lfmm", "Bayenv2LFMMpca.Cpval", snps_file), sep=""), header=TRUE)
+results <- results[results$UseSNP,]
+
+  # snps is the allele frequency data
+  # env_snps is the selection environment for the simulated selected loci
+  # results are the resutls of association tests from L&W 2015
+  env$SimEnv <- env_snps[seq(1,1800, by=20),1]
+  
+  #par(mfrow=c(1,1))
+  #plot(env$Y_Pops, env$SimEnv)
+  #  abline(lm(env$SimEnv~env$Y_Pops))
+  #plot(env$Y_Pops, env$MAT)
+  #  abline(lm(env$MAT~env$Y_Pops))
+  #plot(env$X_Pops, env$MAT)
+  #  abline(lm(env$MAT~env$X_Pops))
+
+  #plot(env$X_Pops, env$SimEnv)
+
+  #head(env)
+  cor.with.sim <- cor(env$SimEnv, env[,c(2:3, 8:27)], method="spearman")
+  print("Correlations between simulated environment and Adaptree environments")
+  print(cor.with.sim)
+  #The correlations between the adaptree environment and the simulated environment are quite low.
+
+  ### Calculate rho
+  ### Create a matrix to hold Spearman's rho and another matrix to hold $P$-values, where each row is a SNP and each column is an environmental variable
+  ### Create environment matrix for individual data
+  env2 <- matrix(NA, nrow(snps), 23) #hard coding
+  k=0
+  env_cols <- c(2:3, 8:28) #hard coding
+  for (i in env_cols){
+    k=k+1
+    env2[,k] <- rep(env[,i], each=20)
+  }
+  dim(env2)
+  colnames(env2) <- names(env)[env_cols]
+  head(env2)
+
+  ### Create matrix for results of associations between SNPs and Adaptree Environments
+  ### and p-values for those associations
+  TrueEnv.rho <- TrueEnv.P <- matrix(NA, ncol(snps), ncol(env2))
+  colnames(TrueEnv.rho) <- names(env)[env_cols]
+  colnames(TrueEnv.P) <- names(env)[env_cols]
+
+  for (j in 1:ncol(env2)){
+    print(colnames(env2)[j])
+    for (i in 1:ncol(snps)){
+        test <- cor.test(snps[,i], env2[,j], method="spearman", exact=FALSE)
+        TrueEnv.rho[i,j] <- test$estimate
+        TrueEnv.P[i,j] <- test$p.value
+      }
+  }
+
+    ### Get indices of neutral and selected SNPs
+  Neut = results$s_high==0
+  print("Number neutral loci:")
+  print(sum(Neut))
+
+  Sel = results$s_high>0 
+  print("Number selected loci:")
+  print(sum(Sel))
+
+  Neut_ind <- 1:9900
+  (Sel_ind <- 9901:ncol(snps))
+
+  ### How many are significant
+  ### I determined which loci were "outliers" by the two criteria: 
+  ### (1) p-values from Spearman's rho less than expected by Bonferroni correction. 
+  ### (2) The first criteria plus a BF > 2 from the stucture-corrected association test with the truly selective environment
+
+  ### False positives and true positives when truly selected environment is unknown
+  (Bonferroni_P_N <- -log10(0.05/(10000*22)))
+  results$Pos_P <- rowSums(-log10(TrueEnv.P[,1:22])>Bonferroni_P_N)>0
+  
+  results$Pos_BF <- results$log.bf>2
+  
+  FP_P <- sum(results$Pos_P[Neut]) #false positives based on p-value only
+  FP_BF <- sum(results$Pos_BF[Neut])
+  FP_P_BF <- sum(results$Pos_P[Neut] & results$Pos_BF[Neut])  # false positives based on p-value and BF
+  
+  print("Numer of false positives based on p-values")
+  print(sum(FP_P))
+  print("Numer of false positives based on BF")
+  print(sum(FP_BF))
+  print("Numer of false positives based on p-values and BF")
+  print(sum(FP_P_BF))
+  
+  ### True Positivies
+  TP_P <- sum(results$Pos_P[Sel]) #true positives based on p-value only
+  TP_BF <- sum(results$Pos_BF[Sel])
+  TP_P_BF <- sum(results$Pos_P[Sel] & results$Pos_BF[Sel])
+  print("Numer of true positives based on p-values")
+  print(sum(TP_P))
+  print("Numer of true positives based on BF")
+  print(sum(TP_BF))
+  print("Numer of true positives based on p-values and BF")
+  print(sum(TP_P_BF))
+  
+  # The false positive rate is really high in the simulated environment (not shown). Not sure why that is. It is true for the IBD sims, but not for the IM sims, which makes me think it has something to do with the scale of autocorrelation in the environment I simulated. Although, there are few or no false positives after correction for population structure at log10 BF > 2.
+
+ClusterAndNetworkEval <- function(out, disthreshold=0.1, filename, color=rep(adjustcolor("grey80", alpha=0.5), length(out))){  
+  # out are the outlier set. May consider neutral only, or neutral and selected loci
+  
+  # Hierarchical clustering
+  s_strength <- results$s_high[which(out)]
+  forh <- TrueEnv.rho[which(out), 1:22]
+  print(dim(forh))
+  snpdist <- dist(abs(forh))
+  h <- hclust(snpdist)
+  snp_distmat <- as.matrix(snpdist)
+  colnames(snp_distmat) <- which(out)
+  rownames(snp_distmat) <- which(out)
+  d4_multi <- myFun(as.dist(snp_distmat))
+     (nedges <- nrow(d4_multi %>%
+    filter(abs(d4_multi$value) < disthreshold)))
+  print("Number of edges")
+  print(nedges)
+    if(nedges > 30000){print("Too many edges"); break}
+  
+  ## Make graph
+  graph_cors <- d4_multi %>%
+    filter(d4_multi$value < disthreshold) %>% #filter to close distances
+    graph_from_data_frame(directed = FALSE)
+   V(graph_cors)$name
+   
+   ## Add nodes with no connections
+  toadd <- !(rownames(snp_distmat) %in% V(graph_cors)$name)
+    sum(toadd)
+    graph_cors2 <- add_vertices(graph_cors, nv = sum(toadd, na.rm=TRUE), name= rownames(snp_distmat)[toadd])
+    V(graph_cors2)$name
+    sum(!(rownames(snp_distmat) %in% V(graph_cors2)$name))
+    graph_cors <- graph_cors2
+    
+      #cluster membership
+   mem=clusters(graph_cors)$membership
+   
+   # number edges for each node
+   nodenumedge <- sapply(V(graph_cors)$name, function(x) length(E(graph_cors)[from(V(graph_cors)[x])]))
+   
+   m <- match(V(graph_cors2)$name, rownames(snp_distmat))
+
+    ggraph(graph_cors) +
+    geom_edge_fan2(aes(edge_alpha = 0.01)) +
+    guides(edge_alpha = "none", edge_width = "none") +
+    #scale_edge_colour_gradientn(limits = c(-1, 1), 
+    #                            colors = c("firebrick2", "dodgerblue2")) +
+    geom_node_point(size = 20, color=color[m]) +
+    #geom_node_text(aes(label = V(graph_cors)$name, size=0.1)) +
+    theme_graph() 
+    
+  ggsave(paste("results2/Network", filename,disthreshold, "dist.pdf", sep="_"), width=15, height=15, units="in")
+  
+   if(identical(names(nodenumedge), names(mem))){
+    return(data.frame(gtcontig_pos=as.numeric(as.character(names(mem))),
+                      subcluster=mem, 
+                      numedge=nodenumedge
+                      ))
+   }else{
+     print("error: node names and edge names not identical")
+   }
+} # end function
+   
+# Neutral only cluster
+clustNeut <- ClusterAndNetworkEval(results$Pos_P[Neut], filename=paste(snps_file, "Neut", sep="_"))
+clustNeut$Type <- "Neut"
+
+# FP and TP  cluster
+  results$color <- NA
+  results$color[results$Pos_P & Neut] <- adjustcolor("grey80", alpha=0.5)
+  results$color[results$Pos_P & results$s_high==0.001] <- adjustcolor("palegreen", alpha=0.15)
+  results$color[results$Pos_P & results$s_high==0.005] <- adjustcolor("seagreen2", alpha=0.5)
+  results$color[results$Pos_P & results$s_high==0.01] <- adjustcolor("turquoise4", alpha=0.5)
+  results$color[results$Pos_P & results$s_high==0.1] <- adjustcolor("navy", alpha=0.5)
+
+clustAll <- ClusterAndNetworkEval(results$Pos_P, filename=paste(snps_file, "ALL", sep="_"), color=results$color[which(results$Pos_P)])
+
+clustAll <- clustAll[order(clustAll$gtcontig_pos),]
+clustAll$s = results$s_high[clustAll$gtcontig_pos]
+
+
+
+ png(file = paste("results2/SimNetworkBoxplot", snps_file,"_", 0.1,".pdf", sep=""), width=5, height=5, units="in", res=300)
+  par(mar=c(4,4,0,0))
+  boxplot(clustAll$numedge~clustAll$s, ylab="Number of edges", xlab="Selection strength")
+  dev.off()
+
+  return(list(snps_file=snps_file, results=results, cor.with.sim=cor.with.sim, TrueEnv.rho=TrueEnv.rho, TrueEnv.P=TrueEnv.P, 
+              NumFP_P=sum(FP_P), NumFP_BF=sum(FP_BF), NumFP_P_BF=sum(FP_P_BF),
+              NumTP_P=sum(TP_P), NumTP_BF=sum(TP_BF), NumTP_P_BF=sum(TP_P_BF), 
+              clustNeut=clustNeut, clustAll=clustAll))
+
+}# end function
+
+
+
+headdir <- "data/LW2015data/"
+x = list.files(headdir)
+files <- x[grep("*.lfmm", x)]
+out <- list()
+
+for (i in 1:length(files)){
+  snps_file <- files[i]
+  out[[i]] <- EvaluateNetworkOnSims(snps_file, headdir)
+}
+
+save(out, file="results2/out.Rdata")
+```
+
+Next step: Analyze false positives and true positives from the simulations and their overall distribution of edges.
+
+### Assess FP and TP rates
+```{r}
+load("results2/out.Rdata") #optional, can start here
+
+str(out[[1]])
+(file = as.character(unlist(lapply(out, function(x){x$snps_file}))))
+(NumFP_P <- as.numeric(unlist(lapply(out, function(x){x$NumFP_P}))))
+(NumFP_BF <- as.numeric(unlist(lapply(out, function(x){x$NumFP_BF}))))
+(NumFP_P_BF <- as.numeric(unlist(lapply(out, function(x){x$NumFP_P_BF}))))
+(NumTP_P <- as.numeric(unlist(lapply(out, function(x){x$NumTP_P}))))
+(NumTP_BF <- as.numeric(unlist(lapply(out, function(x){x$NumTP_BF}))))
+(NumTP_P_BF <- as.numeric(unlist(lapply(out, function(x){x$NumTP_P_BF}))))
+myres1 <- data.frame(file, NumFP_P, NumFP_BF, NumFP_P_BF, NumTP_P, NumTP_BF, NumTP_P_BF)
+myres1$demog <- c(rep("1R",3), rep("2R", 3), rep("IBD", 3), rep("IM", 3))
+myres1
+
+myres <- myres1[1:9,] # exclude IM
+myres$demog <- factor(myres$demog, levels=c("IBD", "1R", "2R"), ordered=TRUE)
+str(myres)
+
+pdf("SimErrorRates.pdf", width=6, height=6)
+  par(mfrow=c(2,2), mar=c(3,2.5,1,1), oma=c(3,3,3,0), las=1)
+  boxplot(myres$NumFP_P/9900~ myres$demog, ylim=c(0,0.01), main="Bonferroni", ylab="False Positive Rate")
+  text(0.5,0.01, "A")
+  boxplot(myres$NumFP_P_BF/9900~ myres$demog, ylim=c(0,0.01), main="Bonferroni + BF")
+    text(0.5,0.01, "B")
+  boxplot(myres$NumTP_P/100~ myres$demog, ylim=c(0,1), ylab="True Positive Rate")
+      text(0.5,1, "C")
+  boxplot(myres$NumTP_P_BF/100~ myres$demog, ylim=c(0,1))
+        text(0.5,1, "D")
+  mtext("Demography", outer=TRUE, side=1)
+  mtext("False positive rate", outer=TRUE, side=2, adj=0.9, las=0, line=1)
+  mtext("True positive rate", outer=TRUE, side=2, adj=0.2, las=0, line=0)
+dev.off()
+```
+
+### Visualize network complexity
+```{r}
+# NOTE HARD CODING FOR DEMOG
+edges1RNeut <- unlist(lapply(1:3, function(x){out[[x]]$clustNeut$numedge}))
+edges1RSel <- unlist(lapply(1:3, function(x){out[[x]]$clustAll$numedge}))
+edges1RSel_s <- unlist(lapply(1:3, function(x){out[[x]]$clustAll$s}))
+
+edges2RNeut <- unlist(lapply(4:6, function(x){out[[x]]$clustNeut$numedge}))
+edges2RSel <- unlist(lapply(4:6, function(x){out[[x]]$clustAll$numedge}))
+edges2RSel_s <- unlist(lapply(4:6, function(x){out[[x]]$clustAll$s}))
+
+edgesIBDNeut <- unlist(lapply(7:9, function(x){out[[x]]$clustNeut$numedge}))
+edgesIBDSel <- unlist(lapply(7:9, function(x){out[[x]]$clustAll$numedge}))
+edgesIBDSel_s <- unlist(lapply(7:9, function(x){out[[x]]$clustAll$s}))
+
+pdf("SelectionStrengthVs.Degree.pdf", width=8, height=3)
+  par(mfrow=c(1,3), mar=c(3,3,3,1), oma=c(2,2,0,0))
+  col=c(adjustcolor("grey80", alpha=0.5), adjustcolor("palegreen", alpha=0.15), adjustcolor("seagreen2", alpha=0.5), adjustcolor("turquoise4", alpha=0.5), adjustcolor("navy", alpha=0.5))
+  boxplot(edgesIBDSel~edgesIBDSel_s, col=col, main="A) IBD")
+  boxplot(edges1RSel~edges1RSel_s, col=col[c(1,3,4,5)], main="B) 1 refuge")
+  boxplot(edges2RSel~edges2RSel_s, col=col[c(1,3,4,5)], main="C) 2 refugia")
+  mtext("Strength of selection (0 = neutral)", 1, outer=TRUE)
+  mtext("Degree in network", 2, outer=TRUE, las=0)
+dev.off()
+```
+
+
+
