@@ -523,39 +523,6 @@ Add GO terms and super convergent status (Yeaman 2016) to contig.group.df
 write.csv(contig.group.df2, "../results/topCandidateContigs.csv")
 ```
 
-### Examine LD based on $r^2$ among contigs  
-```{r}
-LD.df <- read.table("../data/large_files/pine_super_outlier_LD_p4_all_genemeans.txt", header=TRUE)
-head(LD.df)
-
-ind <- which(LD.df$tcontig1 %in% contig.group.df$gtcontig & LD.df$tcontig2 %in% contig.group.df$gtcontig)
-length(ind)
-
-head(LD.df[ind,])
-
-LD2 <- merge(LD.df[ind,], contig.group.df[,c("gtcontig", "ContigID", "cluster")], by.x="tcontig2", by.y="gtcontig")
-
-names(LD2)[c(4,5)] <- paste(names(LD2)[c(4,5)], ".2", sep="")
-
-LD3 <- merge(LD2,  contig.group.df[,c("gtcontig", "ContigID", "cluster")], by.x="tcontig1", by.y="gtcontig")
-
-LD3 <- LD3[order(LD3$ContigID, LD3$ContigID.2),]
-
-head(LD3)
-max(LD3$ContigID)*max(LD3$ContigID)
-dim(LD3)
-# perfect match up!
-
-LD3mat <- matrix(LD3$r2, ncol=108)
-
-png("../results/LD.png", width=6, height=5, units = "in", res=400)
-  par(mar=c(1,1,1,6), oma=c(2,2,0,0))
-  image(1:108, 1:108, LD3mat, xlab="Contig ID", ylab="Contig ID", col=tim.colors(50), xlim=c(-2,108), ylim=c(-2,108), xaxt="n", yaxt="n", bty="n")
-  points(1:108, rep(-1, 108), pch=19, col=contig.group.df$col, cex=0.5)
-  points(rep(-1, 108),1:108,  pch=19, col=contig.group.df$col, cex=0.5)
-  image.plot(LD3mat, legend.only=TRUE, legend.lab = "Correlation in allele frequencies", legend.line = 2.5)
-dev.off()
-```
 
 Make Pine Venn Barplot with contig colors
 ```{r}

@@ -1,0 +1,134 @@
+---
+title: "AnalysisPEGA_4_recomb"
+author: "Katie Lotterhos"
+date: "6/1/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(fields)
+library(superheat)
+```
+
+setwd("/Users/katie/Desktop/CurrResearch/1-AdaptreeData/201509_PEGA/")
+
+```{r}
+### Load top candidates
+topcan <- read.csv("results/topCandidateContigs.csv")
+
+### Load recombination rates
+recom <- read.table("data/recombinationrates/katie_contigs_recombination.txt", header=TRUE)
+
+rownames(recom)
+head(topcan$gtcontig)
+
+
+whichrecom <- match(topcan$gtcontig, rownames(recom))
+topcan$whichrecom <- FALSE
+topcan$whichrecom[whichrecom > 0] <- TRUE
+topcan$whichrecom
+topcan %>% select(gtcontig, cluster, ContigID, whichrecom)
+
+# Number of contigs represented for each group
+table(topcan$cluster, topcan$whichrecom)
+
+# Reorder the matrix
+recom_mat <- as.matrix(recom)
+orderish <- match(rownames(recom), topcan$gtcontig)
+data.frame(rownames(recom), topcan$ContigID[order], orderish)
+#rownames(recom_mat) <- orderish
+#colnames(recom_mat) <- orderish
+
+head(recom_mat)
+diag(recom_mat) <- 0
+
+orderscale <- rank(as.numeric(orderish)) #need order on 1 to 66 for matrix rearrangement
+df2 <- data.frame(rownames(recom_mat), orderish, orderscale)
+df2
+
+#rownames(recom_mat)[sort(orderscale)] # NOTE WRONG ORDER
+#rownames(recom_mat)[orderscale] # NOTE WRONG ORDER
+df2$rownames.recom_mat.[order(orderscale)] # NOTE RIGHT ORDER
+
+recom_mat_ordered_name <- c()
+for (i in 1:ncol(recom_mat)){
+  recom_mat_ordered_name <- c(recom_mat_ordered_name ,rownames(recom_mat)[orderscale==i])
+}
+data.frame(recom_mat_ordered_name, df2$rownames.recom_mat.[order(orderscale)])
+
+recom_mat_ordered <- recom_mat[order(orderscale), order(orderscale)]
+
+#image.plot(recom_mat_ordered, col=two.colors(start="darkred", end = "white", middle="pink"))
+### Add loci info to plot, see other code
+# save()
+
+ind <- match(rownames(recom_mat_ordered), as.character(topcan$gtcontig))
+ind
+
+rownames(recom_mat_ordered) <- ind
+colnames(recom_mat_ordered) <- topcan$cluster[ind]
+
+# plot recombination heatmap, clustered by recombination rates
+png("results/RecombHeatmap.png", width=12, height=12, units="in", res = 300)
+superheat(recom_mat_ordered,
+          row.dendrogram = FALSE,
+          col.dendrogram = FALSE,
+          pretty.order.rows = TRUE,
+          pretty.order.cols = TRUE,
+          heat.pal = two.colors(start="black", end = "white", n=20),
+          left.label.text.size = 4,
+          bottom.label.text.size = 4,
+          bottom.label.size = 0.2,
+          left.label.size = 0.1,
+          left.label.col = topcan$col[ind],
+          bottom.label.col = topcan$col[ind],
+          bottom.label.text.angle = 90
+          )
+dev.off()
+```
+
+### Plot LD among all contigs, same order as Figure 1
+
+```{r}
+LD.df <- read.table("data/large_files/pine_super_outlier_LD_p4_all_genemeans.txt", header=TRUE)
+head(LD.df)
+
+head(topcan$gtcontig)
+
+ind <- which(LD.df$tcontig1 %in% topcan$gtcontig & LD.df$tcontig2 %in% topcan$gtcontig)
+length(ind)
+
+head(LD.df[ind,])
+
+LD2 <- merge(LD.df[ind,], topcan[,c("gtcontig", "ContigID", "cluster")], by.x="tcontig2", by.y="gtcontig")
+
+head(LD2)
+
+names(LD2)[c(4,5)] <- paste(names(LD2)[c(4,5)], ".2", sep="")
+
+head(LD2)
+
+LD3 <- merge(LD2,  topcan[,c("gtcontig", "ContigID", "cluster")], by.x="tcontig1", by.y="gtcontig")
+
+LD3 <- LD3[order(LD3$ContigID, LD3$ContigID.2),]
+
+head(LD3)
+
+max(LD3$ContigID)*max(LD3$ContigID)
+dim(LD3)
+# perfect match up!
+
+LD3mat <- matrix(LD3$r2, ncol=108)
+
+png("../results/LD.png", width=6, height=5, units = "in", res=400)
+  par(mar=c(1,1,1,6), oma=c(2,2,0,0))
+  image(1:108, 1:108, LD3mat, xlab="Contig ID", ylab="Contig ID", col=tim.colors(50), xlim=c(-2,108), ylim=c(-2,108), xaxt="n", yaxt="n", bty="n")
+  points(1:108, rep(-1, 108), pch=19, col=contig.group.df$col, cex=0.5)
+  points(rep(-1, 108),1:108,  pch=19, col=contig.group.df$col, cex=0.5)
+  image.plot(LD3mat, legend.only=TRUE, legend.lab = "Correlation in allele frequencies", legend.line = 2.5)
+dev.off()
+```
+```
